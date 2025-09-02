@@ -39,7 +39,8 @@ export default function EditorPage() {
     <div>
       <h2>Resume Editor</h2>
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div style={{ display: 'grid', gap: 12, maxWidth: 720 }}>
+        <div className="card" style={{ maxWidth: 820 }}>
+          <div className="form-grid">
           <label>
             <span>Template</span>
             <select {...register('template')}>
@@ -107,9 +108,10 @@ export default function EditorPage() {
             <span>Skill 1</span>
             <input {...register('content.skills.0')} placeholder="React" />
           </label>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="row">
             <button type="submit">Save</button>
             <button type="button" onClick={suggest}>AI Skill Suggestions</button>
+          </div>
           </div>
         </div>
       </form>

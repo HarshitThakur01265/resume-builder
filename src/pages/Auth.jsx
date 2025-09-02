@@ -36,15 +36,23 @@ export default function AuthPage() {
   return (
     <div>
       <h2>Auth</h2>
-      <div style={{ display: 'grid', gap: 8, maxWidth: 360 }}>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={signUp}>Sign Up</button>
-          <button onClick={signIn}>Sign In</button>
-          <button onClick={signOut}>Sign Out</button>
+      <div className="card" style={{ maxWidth: 420 }}>
+        <div className="form-grid">
+          <label>
+            <span>Email</span>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+          </label>
+          <label>
+            <span>Password</span>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
+          </label>
+          <div className="row">
+            <button onClick={signUp}>Sign Up</button>
+            <button onClick={signIn}>Sign In</button>
+            <button onClick={signOut}>Sign Out</button>
+          </div>
+          {message && <p>{message}</p>}
         </div>
-        {message && <p>{message}</p>}
       </div>
     </div>
   )

@@ -31,14 +31,14 @@ export default function ResumesPage() {
       ) : items.length === 0 ? (
         <p>No resumes yet. Create one in the Editor.</p>
       ) : (
-        <div style={{ display: 'grid', gap: 8 }}>
+        <div className="list">
           {items.map(item => (
-            <div key={item.id} style={{ background: '#111729', padding: 12, borderRadius: 8, display: 'flex', justifyContent: 'space-between' }}>
+            <div key={item.id} className="list-item">
               <div>
                 <strong>{item.title}</strong>
                 <div style={{ color: '#94a3b8', fontSize: 12 }}>{new Date(item.created_at).toLocaleString()}</div>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div className="row">
                 <Link to={`/preview?id=${item.id}`}>
                   <button type="button">Preview</button>
                 </Link>
