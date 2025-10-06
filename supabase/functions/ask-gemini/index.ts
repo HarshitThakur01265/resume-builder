@@ -20,11 +20,11 @@ serve(async (req) => {
     }
 
     const apiKey = Deno.env.get('GEMINI_API_KEY');
+    const model = Deno.env.get('GEMINI_MODEL') || 'gemini-1.5-flash-002';
     if (!apiKey) {
       return new Response(JSON.stringify({ error: 'GEMINI_API_KEY not configured' }), { status: 500, headers: corsHeaders });
     }
 
-    const model = 'gemini-1.5-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     const resp = await fetch(url, {
       method: 'POST',

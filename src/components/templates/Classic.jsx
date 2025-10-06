@@ -5,53 +5,49 @@ export default function ClassicTemplate({ data }) {
   const skills = Array.isArray(data?.skills) ? data.skills : []
 
   return (
-    <div style={{ fontFamily: 'Segoe UI, system-ui, sans-serif', color: '#e2e8f0' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <h2 style={{ margin: 0 }}>{personal.name || 'Your Name'}</h2>
-        <div style={{ color: '#94a3b8' }}>{personal.email || 'you@email.com'}</div>
+    <div style={{ fontFamily: 'Segoe UI, system-ui, sans-serif', color: 'black' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
+        <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>{personal.name || 'Your Name'}</h2>
+        <div style={{ color: '#666', fontSize: '14px' }}>{personal.email || 'you@email.com'}</div>
       </div>
 
-      <div style={{ height: 12 }} />
-
       {experience.length > 0 && (
-        <section>
-          <h3 style={{ margin: '0 0 6px' }}>Experience</h3>
-          <div style={{ display: 'grid', gap: 8 }}>
+        <section className="avoid-break" style={{ marginBottom: '20px' }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: '18px', fontWeight: 'bold', borderBottom: '2px solid #333', paddingBottom: '4px' }}>Experience</h3>
+          <div style={{ display: 'grid', gap: '12px' }}>
             {experience.map((x, idx) => (
-              <div key={idx}>
-                <strong>{x.role || 'Role'}</strong>{' '}
-                <span style={{ color: '#94a3b8' }}>@ {x.company || 'Company'}</span>
-                {x.summary && <div style={{ whiteSpace: 'pre-wrap' }}>{x.summary}</div>}
+              <div key={idx} className="avoid-break" style={{ marginBottom: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <strong style={{ fontSize: '16px' }}>{x.role || 'Role'}</strong>
+                  <span style={{ color: '#666', fontSize: '14px' }}>@ {x.company || 'Company'}</span>
+                </div>
+                {x.summary && <div style={{ whiteSpace: 'pre-wrap', marginTop: '4px', fontSize: '14px', lineHeight: '1.4' }}>{x.summary}</div>}
               </div>
             ))}
           </div>
         </section>
       )}
-
-      <div style={{ height: 12 }} />
 
       {education.length > 0 && (
-        <section>
-          <h3 style={{ margin: '0 0 6px' }}>Education</h3>
-          <div style={{ display: 'grid', gap: 6 }}>
+        <section className="avoid-break" style={{ marginBottom: '20px' }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: '18px', fontWeight: 'bold', borderBottom: '2px solid #333', paddingBottom: '4px' }}>Education</h3>
+          <div style={{ display: 'grid', gap: '8px' }}>
             {education.map((x, idx) => (
-              <div key={idx}>
-                <strong>{x.degree || 'Degree'}</strong>{' '}
-                <span style={{ color: '#94a3b8' }}>{x.year || ''}</span>
+              <div key={idx} className="avoid-break" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <strong style={{ fontSize: '16px' }}>{x.degree || 'Degree'}</strong>
+                <span style={{ color: '#666', fontSize: '14px' }}>{x.year || ''}</span>
               </div>
             ))}
           </div>
         </section>
       )}
 
-      <div style={{ height: 12 }} />
-
       {skills.length > 0 && (
-        <section>
-          <h3 style={{ margin: '0 0 6px' }}>Skills</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <section className="avoid-break">
+          <h3 style={{ margin: '0 0 12px', fontSize: '18px', fontWeight: 'bold', borderBottom: '2px solid #333', paddingBottom: '4px' }}>Skills</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {skills.filter(Boolean).map((s, idx) => (
-              <span key={idx} style={{ background: 'rgba(255,255,255,0.06)', padding: '4px 8px', borderRadius: 6 }}>{s}</span>
+              <span key={idx} style={{ background: '#f0f0f0', color: '#333', padding: '4px 8px', borderRadius: '4px', fontSize: '14px', border: '1px solid #ddd' }}>{s}</span>
             ))}
           </div>
         </section>

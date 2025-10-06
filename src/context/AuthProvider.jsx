@@ -10,12 +10,18 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let active = true
     async function init() {
+      if (!supabase) {
+        setUser(null)
+        setLoading(false)
+        return
+      }
       const { data } = await supabase.auth.getSession()
       if (!active) return
       setUser(data?.session?.user || null)
       setLoading(false)
     }
     init()
+    if (!supabase) return () => { active = false }
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null)
     })
