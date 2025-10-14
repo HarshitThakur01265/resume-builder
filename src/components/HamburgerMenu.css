@@ -1,0 +1,88 @@
+/* Hamburger Menu Styles */
+.hamburger-menu {
+  background: transparent;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.hamburger-menu::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(59, 130, 246, 0.1), 
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.hamburger-menu:hover::before {
+  left: 100%;
+}
+
+.hamburger-menu:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+}
+
+.hamburger-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 20px;
+  height: 16px;
+  position: relative;
+}
+
+.hamburger-line {
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+  border-radius: 1px;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.3);
+}
+
+.hamburger-menu:hover .hamburger-line {
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+
+/* Light theme adjustments */
+[data-theme="light"] .hamburger-menu {
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="light"] .hamburger-menu::before {
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(59, 130, 246, 0.05), 
+    transparent
+  );
+}
+
+[data-theme="light"] .hamburger-menu:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.15);
+}
+
+[data-theme="light"] .hamburger-line {
+  background: linear-gradient(90deg, #2563eb, #7c3aed);
+  box-shadow: 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="light"] .hamburger-menu:hover .hamburger-line {
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.3);
+}
+

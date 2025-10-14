@@ -1192,6 +1192,14 @@ button:active {
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
+/* Select dropdown: ensure options are visible in dark theme */
+select.glass-input { color: var(--text); background: #0f1629; }
+.glass-input option, .glass-input optgroup { background: #0f1629; color: #e2e8f0; }
+
+/* Light theme adjustments for options */
+[data-theme='light'] select.glass-input { background: #ffffff; color: #0f172a; }
+[data-theme='light'] .glass-input option, [data-theme='light'] .glass-input optgroup { background: #ffffff; color: #0f172a; }
+
 .glass-input:focus {
   outline: none;
   border-color: rgba(96, 165, 250, 0.5);

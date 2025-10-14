@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form'
-import { useState } from 'react'
-import { saveResume } from '../services/resumes'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
+// import { saveResume } from '../services/resumes'
 import { suggestMissingSkills } from '../services/gemini'
 import LottieAnimation from '../components/LottieAnimation'
 import loadingAnimation from '../assets/animations/loading.json'
@@ -20,34 +21,54 @@ const defaultValues = {
 }
 
 export default function EditorPage() {
-  const { register, handleSubmit, getValues } = useForm({ defaultValues })
+  const [searchParams] = useSearchParams()
+  const templateFromUrl = searchParams.get('template')
+  
+  const formDefaultValues = {
+    ...defaultValues,
+    template: templateFromUrl || defaultValues.template
+  }
+  
+  const { register, handleSubmit, getValues, setValue } = useForm({ defaultValues: formDefaultValues })
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [isSuggesting, setIsSuggesting] = useState(false)
+
+
+  // Update template when URL parameter changes
+  useEffect(() => {
+    if (templateFromUrl) {
+      setValue('template', templateFromUrl)
+    }
+  }, [templateFromUrl, setValue])
 
   const onSubmit = async (data) => {
     try {
       setIsLoading(true)
       setIsSuccess(false)
-      await saveResume(data)
+      // Simulate save operation
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      console.log('Resume data:', data)
       setIsLoading(false)
       setIsSuccess(true)
       setTimeout(() => setIsSuccess(false), 3000)
     } catch (e) {
       setIsLoading(false)
-      alert(e.message)
+      alert('Save failed: ' + e.message)
     }
   }
 
   const suggest = async () => {
     const values = getValues()
-    const resumeText = JSON.stringify(values)
-    const jd = prompt('Paste job description:') || ''
-    if (!jd) return
+    const resumeText = `${values.title}\n\n${values.content.summary}\n\nSkills: ${values.content.skills.join(', ')}`
+    const jobDescription = 'Software Developer position requiring technical skills and experience'
+    
     try {
       setIsSuggesting(true)
-      const tips = await suggestMissingSkills(resumeText, jd)
-      alert(tips)
+      const suggestions = await suggestMissingSkills(resumeText, jobDescription)
+      alert(`AI Skill Suggestions:\n\n${suggestions}`)
+    } catch (e) {
+      alert('Failed to get suggestions: ' + e.message)
     } finally {
       setIsSuggesting(false)
     }
@@ -57,18 +78,9 @@ export default function EditorPage() {
     <div className="page-glass-wrapper">
       <div className="glass-container glass-border" style={{ maxWidth: 900, padding: '40px', zIndex: 2 }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <h2 style={{ 
-            fontSize: 'clamp(28px, 4vw, 36px)', 
-            fontWeight: 700,
-            background: 'linear-gradient(135deg, var(--text), var(--accent), #4f9ff5)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            margin: 0,
-            textShadow: '0 2px 4px rgba(96, 165, 250, 0.2)'
-          }}>
+          <h1 style={{ margin: '0 0 8px 0', color: 'var(--text)', fontSize: '32px', fontWeight: 700 }}>
             Resume Editor
-          </h2>
+          </h1>
           <p style={{ color: 'var(--muted)', marginTop: '8px', fontSize: '16px' }}>
             Create and customize your professional resume
           </p>
@@ -131,31 +143,45 @@ export default function EditorPage() {
               <h3 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '18px', fontWeight: 600 }}>Links</h3>
               <div style={{ display: 'grid', gap: '16px' }}>
                 <label style={{ gap: '8px' }}>
-                  <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>GitHub URL</span>
+                  <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>GitHub</span>
                   <input className="glass-input" {...register('content.links.github')} placeholder="https://github.com/username" />
                 </label>
                 <label style={{ gap: '8px' }}>
-                  <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>LinkedIn URL</span>
+                  <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>LinkedIn</span>
                   <input className="glass-input" {...register('content.links.linkedin')} placeholder="https://linkedin.com/in/username" />
                 </label>
                 <label style={{ gap: '8px' }}>
                   <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Website</span>
-                  <input className="glass-input" {...register('content.links.website')} placeholder="https://yoursite.com" />
+                  <input className="glass-input" {...register('content.links.website')} placeholder="https://yourwebsite.com" />
                 </label>
               </div>
             </div>
 
             <div className="glass-container" style={{ padding: '24px' }}>
-              <h3 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '18px', fontWeight: 600 }}>Professional Summary</h3>
+              <h3 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '18px', fontWeight: 600 }}>Summary</h3>
               <label style={{ gap: '8px' }}>
-                <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Summary</span>
+                <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Professional Summary</span>
                 <textarea 
                   className="glass-input" 
                   {...register('content.summary')} 
-                  placeholder="Short professional summary"
+                  placeholder="Brief description of your professional background and key achievements..."
                   style={{ minHeight: '100px', resize: 'vertical' }}
                 />
               </label>
+            </div>
+
+            <div className="glass-container" style={{ padding: '24px' }}>
+              <h3 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '18px', fontWeight: 600 }}>Education</h3>
+              <div style={{ display: 'grid', gap: '16px' }}>
+                <label style={{ gap: '8px' }}>
+                  <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Degree</span>
+                  <input className="glass-input" {...register('content.education.0.degree')} placeholder="Bachelor of Science in Computer Science" />
+                </label>
+                <label style={{ gap: '8px' }}>
+                  <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Year</span>
+                  <input className="glass-input" {...register('content.education.0.year')} placeholder="2020" />
+                </label>
+              </div>
             </div>
 
             <div className="glass-container" style={{ padding: '24px' }}>
@@ -163,40 +189,24 @@ export default function EditorPage() {
               <div style={{ display: 'grid', gap: '16px' }}>
                 <label style={{ gap: '8px' }}>
                   <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Role</span>
-                  <input className="glass-input" {...register('content.experience.0.role')} placeholder="Frontend Developer" />
+                  <input className="glass-input" {...register('content.experience.0.role')} placeholder="Software Developer" />
                 </label>
-                <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: '2fr 1fr' }}>
-                  <label style={{ gap: '8px' }}>
-                    <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Company</span>
-                    <input className="glass-input" {...register('content.experience.0.company')} placeholder="ACME Inc." />
-                  </label>
-                  <label style={{ gap: '8px' }}>
-                    <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Period</span>
-                    <input className="glass-input" {...register('content.experience.0.period')} placeholder="Jan 2021 - Present" />
-                  </label>
-                </div>
+                <label style={{ gap: '8px' }}>
+                  <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Company</span>
+                  <input className="glass-input" {...register('content.experience.0.company')} placeholder="Tech Company Inc." />
+                </label>
+                <label style={{ gap: '8px' }}>
+                  <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Period</span>
+                  <input className="glass-input" {...register('content.experience.0.period')} placeholder="2020 - Present" />
+                </label>
                 <label style={{ gap: '8px' }}>
                   <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Summary</span>
                   <textarea 
                     className="glass-input" 
                     {...register('content.experience.0.summary')} 
-                    placeholder="Built X with Y to achieve Z."
+                    placeholder="Describe your key responsibilities and achievements..."
                     style={{ minHeight: '80px', resize: 'vertical' }}
                   />
-                </label>
-              </div>
-            </div>
-
-            <div className="glass-container" style={{ padding: '24px' }}>
-              <h3 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '18px', fontWeight: 600 }}>Education</h3>
-              <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: '2fr 1fr' }}>
-                <label style={{ gap: '8px' }}>
-                  <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Degree</span>
-                  <input className="glass-input" {...register('content.education.0.degree')} placeholder="B.Tech CSE" />
-                </label>
-                <label style={{ gap: '8px' }}>
-                  <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Year</span>
-                  <input className="glass-input" {...register('content.education.0.year')} placeholder="2023" />
                 </label>
               </div>
             </div>

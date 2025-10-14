@@ -24,15 +24,19 @@ function isResumeRelated(prompt) {
 }
 
 // --- 3) Main chatbot function ---
-export async function askGemini(prompt) {
-  // Greeting response
-  if (isGreeting(prompt)) {
-    return "👋 Hello! I’m your Resume Assistant Bot. I can help you build, improve, and analyze resumes, suggest missing skills, and answer resume-related queries."
-  }
+export async function askGemini(prompt, options = {}) {
+  const { skipGuards = false } = options
+  // Only apply small-talk and topicality guards for the chatbot use case
+  if (!skipGuards) {
+    // Greeting response
+    if (isGreeting(prompt)) {
+      return "👋 Hello! I’m your Resume Assistant Bot. I can help you build, improve, and analyze resumes, suggest missing skills, and answer resume-related queries."
+    }
 
-  // Block unrelated queries
-  if (!isResumeRelated(prompt)) {
-    return "⚠️ I can only assist with resume-related questions, doubts, and queries."
+    // Block unrelated queries
+    if (!isResumeRelated(prompt)) {
+      return "⚠️ I can only assist with resume-related questions, doubts, and queries."
+    }
   }
 
   // 1) Direct Gemini API call
@@ -81,4 +85,94 @@ export async function askGemini(prompt) {
 export async function suggestMissingSkills(resumeText, jobDescription) {
   const prompt = `Here is a resume:\n${resumeText}\n\nHere is a job description:\n${jobDescription}\n\nSuggest 5 missing skills the resume should include. Return as a simple bullet list.`
   return askGemini(prompt)
+}
+
+// --- 5) Parse multilingual transcript into structured English resume fields ---
+// Returns an object like:
+// {
+//   template: string,
+//   title: string,
+//   content: {
+//     personal: { name, email, phone },
+//     links: { github, linkedin, website },
+//     summary: string,
+//     education: [{ degree, year }],
+//     experience: [{ role, company, period, summary }],
+//     skills: string[]
+//   }
+// }
+export async function parseTranscriptToResume(transcript, sourceLocale) {
+  const system = `You are a resume structuring assistant. You will receive a possibly multilingual or mixed-language spoken transcript of a person's resume details. Your job is to:
+1) Detect and translate content to professional English.
+2) Extract fields into a strict JSON schema (no extra keys!).
+3) Keep concise, professional tone.
+4) Infer reasonable defaults if missing (empty strings or arrays).
+
+Strict JSON schema to return (and ONLY the JSON):
+{
+  "template": string,
+  "title": string,
+  "content": {
+    "personal": { "name": string, "email": string, "phone": string },
+    "links": { "github": string, "linkedin": string, "website": string },
+    "summary": string,
+    "education": [ { "degree": string, "year": string } ],
+    "experience": [ { "role": string, "company": string, "period": string, "summary": string } ],
+    "skills": string[]
+  }
+}`
+
+  const prompt = `${system}\n\nSpoken transcript (locale=${sourceLocale}):\n"""\n${transcript}\n"""\n\nReturn ONLY the JSON.`
+  // Bypass chatbot guards because this is a structured parsing task, not chat
+  const text = await askGemini(prompt, { skipGuards: true })
+  try {
+    // Extract JSON block if model returns prose
+    const jsonMatch = text.match(/\{[\s\S]*\}\s*$/)
+    const jsonText = jsonMatch ? jsonMatch[0] : text
+    const parsed = JSON.parse(jsonText)
+    // Normalize to ensure the app never receives undefined fields
+    const norm = {
+      template: parsed?.template || 'classic',
+      title: parsed?.title || 'Resume',
+      content: {
+        personal: {
+          name: parsed?.content?.personal?.name || '',
+          email: parsed?.content?.personal?.email || '',
+          phone: parsed?.content?.personal?.phone || ''
+        },
+        links: {
+          github: parsed?.content?.links?.github || '',
+          linkedin: parsed?.content?.links?.linkedin || '',
+          website: parsed?.content?.links?.website || ''
+        },
+        summary: parsed?.content?.summary || '',
+        education: Array.isArray(parsed?.content?.education) && parsed.content.education.length
+          ? parsed.content.education
+          : [{ degree: '', year: '' }],
+        experience: Array.isArray(parsed?.content?.experience) && parsed.content.experience.length
+          ? parsed.content.experience
+          : [{ role: '', company: '', period: '', summary: '' }],
+        skills: Array.isArray(parsed?.content?.skills)
+          ? parsed.content.skills
+          : (typeof parsed?.content?.skills === 'string' && parsed.content.skills
+            ? parsed.content.skills.split(/[\,\n]/).map(s => s.trim()).filter(Boolean)
+            : [])
+      }
+    }
+    return norm
+  } catch (e) {
+    // Fallback minimal structure to avoid crashing UI
+    return {
+      template: 'classic',
+      title: 'Resume',
+      content: {
+        personal: { name: '', email: '', phone: '' },
+        links: { github: '', linkedin: '', website: '' },
+        summary: transcript.slice(0, 400),
+        education: [{ degree: '', year: '' }],
+        experience: [{ role: '', company: '', period: '', summary: '' }],
+        skills: []
+      }
+    }
+  }
 }

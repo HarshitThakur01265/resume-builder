@@ -1,5 +1,5 @@
 {
-  "name": "resume-builder",
+  "name": "Resumify",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -12,8 +12,8 @@
   "dependencies": {
     "@mantine/core": "^7.3.2",
     "@mantine/hooks": "^7.3.2",
-    "@react-three/fiber": "^8.15.16",
     "@supabase/supabase-js": "^2.38.0",
+    "framer-motion": "^12.23.22",
     "html2pdf.js": "^0.10.1",
     "lottie-react": "^2.4.0",
     "react": "^18.2.0",
@@ -21,7 +21,6 @@
     "react-hook-form": "^7.48.2",
     "react-markdown": "^9.0.1",
     "react-router-dom": "^6.8.1",
-    "three": "^0.158.0",
     "typed.js": "^2.1.0"
   },
   "devDependencies": {

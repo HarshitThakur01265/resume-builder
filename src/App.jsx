@@ -5,14 +5,15 @@ import EditorPage from './pages/Editor'
 import PreviewPage from './pages/Preview'
 import ChatbotPage from './pages/Chatbot'
 import ResumesPage from './pages/Resumes'
-import ProtectedRoute from './components/ProtectedRoute'
 import HomeTypingEffect from './components/HomeTypingEffect'
 import TemplatePreviewGrid from './components/TemplatePreviewGrid'
 import Beams from './components/Beams'
-import AITeaser from './components/AITeaser'
 import FloatingAITeaser from './components/FloatingAITeaser'
 import MagicClick from './components/MagicClick'
+import AnimatedSideDrawer from './components/AnimatedSideDrawer'
+import HamburgerMenu from './components/HamburgerMenu'
 import './App.css'
+import heroIllustration from './assets/hero-illustration.svg'
 
 function Layout({ children }) {
   const location = useLocation()
@@ -20,6 +21,7 @@ function Layout({ children }) {
     return localStorage.getItem('theme') || 'dark'
   })
   const [accentColor, setAccentColor] = useState('#60a5fa')
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -33,46 +35,33 @@ function Layout({ children }) {
       setAccentColor(theme === 'dark' ? '#60a5fa' : '#2563eb')
     }
   }, [theme])
-  const links = [
-    { to: '/', label: 'Home', end: true },
-    { to: '/auth', label: 'Auth' },
-    { to: '/editor', label: 'Editor' },
-    { to: '/resumes', label: 'Resumes' },
-    { to: '/preview', label: 'Preview' },
-    { to: '/chatbot', label: 'Chatbot' }
-  ]
+
+  const toggleDrawer = () => {
+    setIsDrawerOpen(!isDrawerOpen)
+  }
+
+  const closeDrawer = () => {
+    setIsDrawerOpen(false)
+  }
+
   return (
     <div className="app-container">
       <MagicClick />
       <Beams beamNumber={12} beamWidth={2} beamHeight={15} speed={theme === 'dark' ? 2.2 : 1.6} noiseIntensity={theme === 'dark' ? 1.75 : 1.2} />
       <header className="app-header">
         <nav className="nav">
-          <div className="brand">Resume Builder</div>
-          {links.map((l) => {
-            const active = l.end ? location.pathname === l.to : location.pathname.startsWith(l.to)
-            return (
-              <NavLink key={l.to} to={l.to} end={l.end} className={active ? 'active' : ''}>{l.label}</NavLink>
-            )
-          })}
+          <div className="brand">Resumify</div>
           <div className="spacer" />
-          <button
-            onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-            aria-label="Toggle theme"
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            style={{
-              background: 'transparent',
-              color: 'var(--text)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              borderRadius: 999,
-              padding: '6px 10px',
-              cursor: 'pointer'
-            }}
-          >
-            {theme === 'dark' ? '🌗 Light' : '🌑 Dark'}
-          </button>
+          <HamburgerMenu isOpen={isDrawerOpen} onClick={toggleDrawer} />
         </nav>
       </header>
       <main className="main-content">{children}</main>
+      <AnimatedSideDrawer 
+        isOpen={isDrawerOpen} 
+        onClose={closeDrawer}
+        theme={theme}
+        setTheme={setTheme}
+      />
     </div>
   )
 }
@@ -146,14 +135,13 @@ function Home() {
       {/* Hero Illustration */}
       <div className="hero-illustration">
         <img 
-          src="/src/assets/hero-illustration.svg" 
+          src={heroIllustration} 
           alt="Professional resume building illustration"
           className="hero-image"
         />
       </div>
       
-      {/* Typing Resume Effect */
-      }
+      {/* Typing Resume Effect */}
       <div style={{ margin: '20px 0' }}>
         <HomeTypingEffect />
       </div>
@@ -247,9 +235,9 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/auth" element={<AuthPage />} />
-        <Route path="/editor" element={<ProtectedRoute><EditorPage /></ProtectedRoute>} />
-        <Route path="/resumes" element={<ProtectedRoute><ResumesPage /></ProtectedRoute>} />
-        <Route path="/preview" element={<ProtectedRoute><PreviewPage /></ProtectedRoute>} />
+        <Route path="/editor" element={<EditorPage />} />
+        <Route path="/resumes" element={<ResumesPage />} />
+        <Route path="/preview" element={<PreviewPage />} />
         <Route path="/chatbot" element={<ChatbotPage />} />
       </Routes>
     </Layout>
