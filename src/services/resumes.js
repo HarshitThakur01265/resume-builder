@@ -1,11 +1,19 @@
 import { supabase } from '../lib/supabaseClient'
 
+function assertSupabaseConfigured() {
+  if (!supabase) {
+    throw new Error('Supabase not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env and restart.')
+  }
+}
+
 export async function getCurrentUser() {
+  assertSupabaseConfigured()
   const { data } = await supabase.auth.getUser()
   return data?.user || null
 }
 
 export async function saveResume(resume) {
+  assertSupabaseConfigured()
   const user = await getCurrentUser()
   if (!user) throw new Error('Not authenticated')
   const { data, error } = await supabase
@@ -17,6 +25,7 @@ export async function saveResume(resume) {
 }
 
 export async function listResumes() {
+  assertSupabaseConfigured()
   const user = await getCurrentUser()
   if (!user) throw new Error('Not authenticated')
   const { data, error } = await supabase
@@ -29,6 +38,7 @@ export async function listResumes() {
 }
 
 export async function deleteResume(id) {
+  assertSupabaseConfigured()
   const user = await getCurrentUser()
   if (!user) throw new Error('Not authenticated')
   const { error } = await supabase
@@ -41,6 +51,7 @@ export async function deleteResume(id) {
 }
 
 export async function getResume(id) {
+  assertSupabaseConfigured()
   const user = await getCurrentUser()
   if (!user) throw new Error('Not authenticated')
   const { data, error } = await supabase
@@ -54,6 +65,7 @@ export async function getResume(id) {
 }
 
 export async function updateResume(id, resume) {
+  assertSupabaseConfigured()
   const user = await getCurrentUser()
   if (!user) throw new Error('Not authenticated')
   const { data, error } = await supabase
@@ -67,6 +79,7 @@ export async function updateResume(id, resume) {
 }
 
 export async function getLatestResume() {
+  assertSupabaseConfigured()
   const list = await listResumes()
   return list[0] || null
 }

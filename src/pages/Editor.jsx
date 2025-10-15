@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
-// import { saveResume } from '../services/resumes'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { saveResume } from '../services/resumes'
 import { suggestMissingSkills } from '../services/gemini'
 import LottieAnimation from '../components/LottieAnimation'
 import loadingAnimation from '../assets/animations/loading.json'
@@ -16,12 +16,26 @@ const defaultValues = {
     summary: '',
     education: [{ degree: '', year: '' }],
     experience: [{ role: '', company: '', period: '', summary: '' }],
-    skills: ['']
+    skills: [''],
+    projects: [
+      {
+        title: '',
+        shortDescription: '',
+        description: '',
+        images: [],
+        videoUrl: '',
+        liveUrl: '',
+        figmaUrl: '',
+        githubUrl: '',
+        link: ''
+      }
+    ]
   }
 }
 
 export default function EditorPage() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const templateFromUrl = searchParams.get('template')
   
   const formDefaultValues = {
@@ -46,15 +60,28 @@ export default function EditorPage() {
     try {
       setIsLoading(true)
       setIsSuccess(false)
-      // Simulate save operation
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      console.log('Resume data:', data)
+      
+      // Save resume to database
+      const savedResume = await saveResume(data)
+      console.log('Resume saved:', savedResume)
+      
       setIsLoading(false)
       setIsSuccess(true)
-      setTimeout(() => setIsSuccess(false), 3000)
+      
+      // Navigate to preview page after successful save
+      setTimeout(() => {
+        navigate('/preview')
+      }, 1500)
+      
     } catch (e) {
       setIsLoading(false)
-      alert('Save failed: ' + e.message)
+      const message = e?.message || 'Unknown error'
+      if (message.includes('Not authenticated')) {
+        alert('Please sign in to save your resume.')
+        navigate('/auth')
+        return
+      }
+      alert('Save failed: ' + message)
     }
   }
 
@@ -218,6 +245,50 @@ export default function EditorPage() {
                 <input className="glass-input" {...register('content.skills.0')} placeholder="React" />
               </label>
             </div>
+
+        <div className="glass-container" style={{ padding: '24px' }}>
+          <h3 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '18px', fontWeight: 600 }}>Projects</h3>
+          <div style={{ display: 'grid', gap: '16px' }}>
+            <label style={{ gap: '8px' }}>
+              <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Title</span>
+              <input className="glass-input" {...register('content.projects.0.title')} placeholder="Project name" />
+            </label>
+            <label style={{ gap: '8px' }}>
+              <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Short Description</span>
+              <input className="glass-input" {...register('content.projects.0.shortDescription')} placeholder="One-liner about the project" />
+            </label>
+            <label style={{ gap: '8px' }}>
+              <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Detailed Description</span>
+              <textarea className="glass-input" {...register('content.projects.0.description')} placeholder="What it does, your role, technologies used" style={{ minHeight: '80px', resize: 'vertical' }} />
+            </label>
+            <label style={{ gap: '8px' }}>
+              <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Images (comma separated URLs)</span>
+              <input className="glass-input" onChange={(e) => setValue('content.projects.0.images', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} placeholder="https://...jpg, https://...png" />
+            </label>
+            <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+              <label style={{ gap: '8px' }}>
+                <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Video URL (YouTube/Vimeo)</span>
+                <input className="glass-input" {...register('content.projects.0.videoUrl')} placeholder="https://www.youtube.com/embed/..." />
+              </label>
+              <label style={{ gap: '8px' }}>
+                <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Live URL (embed)</span>
+                <input className="glass-input" {...register('content.projects.0.liveUrl')} placeholder="https://your-live-demo.com" />
+              </label>
+              <label style={{ gap: '8px' }}>
+                <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Figma URL</span>
+                <input className="glass-input" {...register('content.projects.0.figmaUrl')} placeholder="https://www.figma.com/file/..." />
+              </label>
+              <label style={{ gap: '8px' }}>
+                <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>GitHub URL</span>
+                <input className="glass-input" {...register('content.projects.0.githubUrl')} placeholder="https://github.com/username/repo" />
+              </label>
+              <label style={{ gap: '8px' }}>
+                <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>External Link</span>
+                <input className="glass-input" {...register('content.projects.0.link')} placeholder="https://project-site.com" />
+              </label>
+            </div>
+          </div>
+        </div>
 
             <div className="row" style={{ gap: '12px', marginTop: '20px', justifyContent: 'center' }}>
               <button className="glass-button" type="submit" disabled={isLoading}>

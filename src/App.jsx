@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import AuthPage from './pages/Auth'
 import EditorPage from './pages/Editor'
 import PreviewPage from './pages/Preview'
+import ProjectPublicPage from './pages/ProjectPublic'
 import ChatbotPage from './pages/Chatbot'
 import ResumesPage from './pages/Resumes'
 import HomeTypingEffect from './components/HomeTypingEffect'
@@ -238,6 +239,7 @@ function App() {
         <Route path="/editor" element={<EditorPage />} />
         <Route path="/resumes" element={<ResumesPage />} />
         <Route path="/preview" element={<PreviewPage />} />
+        <Route path="/project" element={<ProjectPublicPage />} />
         <Route path="/chatbot" element={<ChatbotPage />} />
       </Routes>
     </Layout>

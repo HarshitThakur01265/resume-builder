@@ -14,6 +14,7 @@ import TimelineTemplate from './templates/Timeline'
 import TwoColumnTemplate from './templates/TwoColumn'
 import ATSTemplate from './templates/ATS'
 import InfographicTemplate from './templates/Infographic'
+import ProjectsGrid from './ProjectsGrid'
 
 export default function PreviewCanvas({ resume }) {
   const rawContent = resume?.content || {}
@@ -38,6 +39,8 @@ export default function PreviewCanvas({ resume }) {
       {selected === 'two-column' && <TwoColumnTemplate data={content} />}
       {selected === 'ats' && <ATSTemplate data={content} />}
       {selected === 'infographic' && <InfographicTemplate data={content} />}
+      <div className="page-break" style={{ marginTop: '16px' }} />
+      <ProjectsGrid projects={content.projects} resumeTitle={resume?.title} />
     </div>
   )
 }
