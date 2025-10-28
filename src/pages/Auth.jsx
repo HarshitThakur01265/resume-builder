@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from '../lib/supabaseClient'
+import { supabase, supabaseConfigError } from '../lib/supabaseClient'
 import LottieAnimation from '../components/LottieAnimation'
 import loadingAnimation from '../assets/animations/loading.json'
 import successAnimation from '../assets/animations/success.json'
@@ -15,6 +15,7 @@ export default function AuthPage() {
   const signUp = async () => {
     setMessage('')
     if (!email || !password) return setMessage('Email and password required')
+    if (!supabase) return setMessage(supabaseConfigError || 'Supabase client not initialized')
     if (password.length < 6) return setMessage('Password must be at least 6 characters')
     try {
       setIsLoading(true)
@@ -41,11 +42,12 @@ export default function AuthPage() {
   const signIn = async () => {
     setMessage('')
     if (!email || !password) return setMessage('Email and password required')
+    if (!supabase) return setMessage(supabaseConfigError || 'Supabase client not initialized')
     try {
       setIsLoading(true)
       setLoadingType('signin')
       setIsSuccess(false)
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         setMessage(error?.message || 'Sign in failed')
       } else {
@@ -63,7 +65,9 @@ export default function AuthPage() {
     try {
       setIsLoading(true)
       setLoadingType('signout')
-      await supabase.auth.signOut()
+      if (supabase) {
+        await supabase.auth.signOut()
+      }
       setMessage('Signed out')
       setIsSuccess(true)
       setTimeout(() => setIsSuccess(false), 3000)
@@ -72,6 +76,8 @@ export default function AuthPage() {
       setLoadingType('')
     }
   }
+
+  
 
   return (
     <div className="page-glass-wrapper">

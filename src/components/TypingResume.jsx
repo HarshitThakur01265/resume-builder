@@ -6,7 +6,6 @@ import writingAnimation from '../assets/animations/writing.json'
 export default function TypingResume({ resume, onComplete }) {
   const [currentSection, setCurrentSection] = useState(0)
   const [isTyping, setIsTyping] = useState(true)
-  const [displayedContent, setDisplayedContent] = useState({})
 
   const personal = resume?.content?.personal || {}
   const experience = Array.isArray(resume?.content?.experience) ? resume.content.experience : []

@@ -1,4 +1,4 @@
-import { Routes, Route, NavLink, Link, useLocation } from 'react-router-dom'
+import { Routes, Route, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import AuthPage from './pages/Auth'
 import EditorPage from './pages/Editor'
@@ -6,6 +6,7 @@ import PreviewPage from './pages/Preview'
 import ProjectPublicPage from './pages/ProjectPublic'
 import ChatbotPage from './pages/Chatbot'
 import ResumesPage from './pages/Resumes'
+import ProfileSelectPage from './pages/ProfileSelect'
 import HomeTypingEffect from './components/HomeTypingEffect'
 import TemplatePreviewGrid from './components/TemplatePreviewGrid'
 import Beams from './components/Beams'
@@ -17,24 +18,14 @@ import './App.css'
 import heroIllustration from './assets/hero-illustration.svg'
 
 function Layout({ children }) {
-  const location = useLocation()
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('theme') || 'dark'
   })
-  const [accentColor, setAccentColor] = useState('#60a5fa')
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
-    try {
-      const root = document.documentElement
-      const accent = getComputedStyle(root).getPropertyValue('--accent').trim()
-      if (accent) setAccentColor(accent)
-      else setAccentColor(theme === 'dark' ? '#60a5fa' : '#2563eb')
-    } catch {
-      setAccentColor(theme === 'dark' ? '#60a5fa' : '#2563eb')
-    }
   }, [theme])
 
   const toggleDrawer = () => {
@@ -221,7 +212,7 @@ function Home() {
           <Link to="/auth" className="cta-primary">
             Get Started
           </Link>
-          <Link to="/editor" className="cta-secondary">
+          <Link to="/choose-profile" className="cta-secondary">
             Sign In to Build Resume
           </Link>
         </div>
@@ -237,6 +228,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/editor" element={<EditorPage />} />
+        <Route path="/choose-profile" element={<ProfileSelectPage />} />
         <Route path="/resumes" element={<ResumesPage />} />
         <Route path="/preview" element={<PreviewPage />} />
         <Route path="/project" element={<ProjectPublicPage />} />

@@ -14,14 +14,7 @@ const LottieAnimation = ({
   onLoopComplete = null,
   ...props 
 }) => {
-  const defaultOptions = {
-    loop,
-    autoplay,
-    animationData,
-    rendererSettings: {
-      preserveAspectRatio: 'xMidYMid meet'
-    }
-  }
+  // defaultOptions removed (unused) to satisfy linter
 
   const handleComplete = () => {
     if (onComplete) {

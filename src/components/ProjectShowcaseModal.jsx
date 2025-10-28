@@ -1,7 +1,23 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 
 export default function ProjectShowcaseModal({ project, isOpen, onClose, resumeTitle }) {
   const [activeImageIndex, setActiveImageIndex] = useState(0)
+  // Compute flags before any callbacks reference them to avoid TDZ errors
+  const hasImages = project ? Array.isArray(project.images) && project.images.length > 0 : false
+  const hasVideo = !!(project && project.videoUrl)
+  const hasLive = !!(project && project.liveUrl)
+  const hasFigma = !!(project && project.figmaUrl)
+  const hasGithub = !!(project && project.githubUrl)
+  const nextImage = useCallback(() => {
+    if (!hasImages) return
+    setActiveImageIndex((i) => (i + 1) % project.images.length)
+  }, [hasImages, project])
+
+  const prevImage = useCallback(() => {
+    if (!hasImages) return
+    setActiveImageIndex((i) => (i - 1 + project.images.length) % project.images.length)
+  }, [hasImages, project])
+
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') onClose?.()
@@ -10,18 +26,13 @@ export default function ProjectShowcaseModal({ project, isOpen, onClose, resumeT
     }
     if (isOpen) window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, nextImage, prevImage])
 
-  if (!isOpen || !project) return null
-
-  const hasImages = Array.isArray(project.images) && project.images.length > 0
-  const hasVideo = Boolean(project.videoUrl)
-  const hasLive = Boolean(project.liveUrl)
-  const hasFigma = Boolean(project.figmaUrl)
-  const hasGithub = Boolean(project.githubUrl)
+  
 
   const shareUrl = useMemo(() => {
     try {
+      if (!project) return ''
       const payload = { ...project }
       const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))))
       const base = window.location.origin
@@ -44,14 +55,9 @@ export default function ProjectShowcaseModal({ project, isOpen, onClose, resumeT
     }
   }
 
-  const nextImage = () => {
-    if (!hasImages) return
-    setActiveImageIndex((i) => (i + 1) % project.images.length)
-  }
-  const prevImage = () => {
-    if (!hasImages) return
-    setActiveImageIndex((i) => (i - 1 + project.images.length) % project.images.length)
-  }
+  
+
+  if (!isOpen || !project) return null
 
   return (
     <div 

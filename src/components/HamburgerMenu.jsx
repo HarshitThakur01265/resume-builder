@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion'
 import './HamburgerMenu.css'
+// Touch motion to avoid linter unused false positive
+const __ensureMotionUsed = !!motion
 
 const HamburgerMenu = ({ isOpen, onClick }) => {
   const lineVariants = {

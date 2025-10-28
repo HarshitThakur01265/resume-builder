@@ -127,6 +127,7 @@ Strict JSON schema to return (and ONLY the JSON):
   const text = await askGemini(prompt, { skipGuards: true })
   try {
     // Extract JSON block if model returns prose
+    // Match a JSON block at the end without escaping unnecessary characters
     const jsonMatch = text.match(/\{[\s\S]*\}\s*$/)
     const jsonText = jsonMatch ? jsonMatch[0] : text
     const parsed = JSON.parse(jsonText)
@@ -155,12 +156,12 @@ Strict JSON schema to return (and ONLY the JSON):
         skills: Array.isArray(parsed?.content?.skills)
           ? parsed.content.skills
           : (typeof parsed?.content?.skills === 'string' && parsed.content.skills
-            ? parsed.content.skills.split(/[\,\n]/).map(s => s.trim()).filter(Boolean)
+            ? parsed.content.skills.split(/[\n,]/).map(s => s.trim()).filter(Boolean)
             : [])
       }
     }
     return norm
-  } catch (e) {
+  } catch {
     // Fallback minimal structure to avoid crashing UI
     return {
       template: 'classic',

@@ -1,10 +1,9 @@
-import { createContext, useContext, useState } from 'react'
-
-const AuthContext = createContext({ user: null, loading: false })
+import { useState } from 'react'
+import { AuthContext } from './auth-context'
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [user] = useState(null)
+  const [loading] = useState(false)
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
@@ -13,7 +12,5 @@ export function AuthProvider({ children }) {
   )
 }
 
-export function useAuth() {
-  return useContext(AuthContext)
-}
+// Consumers should import `useAuth` directly from './auth-context'
 

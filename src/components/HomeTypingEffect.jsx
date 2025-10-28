@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthProvider'
+import { useState, useEffect, useMemo } from 'react'
+import { useAuth } from '../context/auth-context'
 import TypingEffect from './TypingEffect'
 
 export default function HomeTypingEffect() {
   const { user } = useAuth()
   const [currentSection, setCurrentSection] = useState(0)
-  const [isTyping, setIsTyping] = useState(true)
   const [showStamp, setShowStamp] = useState(false)
 
   const derivedName = (() => {
@@ -29,7 +28,7 @@ export default function HomeTypingEffect() {
     return 'Sarah Johnson'
   })()
 
-  const sampleResume = [
+  const sampleResume = useMemo(() => ([
     {
       title: "Name",
       content: derivedName,
@@ -54,7 +53,7 @@ export default function HomeTypingEffect() {
       delay: 4000,
       icon: "⚡"
     }
-  ]
+  ]), [derivedName])
 
   useEffect(() => {
     if (currentSection >= sampleResume.length) {
@@ -62,7 +61,6 @@ export default function HomeTypingEffect() {
       const restart = setTimeout(() => {
         setShowStamp(false)
         setCurrentSection(0)
-        setIsTyping(true)
       }, 2500)
       return () => clearTimeout(restart)
     }
@@ -72,7 +70,7 @@ export default function HomeTypingEffect() {
     }, sampleResume[currentSection]?.delay || 2000)
 
     return () => clearTimeout(timer)
-  }, [currentSection])
+  }, [currentSection, sampleResume])
 
   return (
     <div style={{ 

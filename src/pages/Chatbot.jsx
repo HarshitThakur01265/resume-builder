@@ -20,7 +20,6 @@ export default function ChatbotPage() {
     } catch (e) {
       const message = (e && e.message) ? e.message : 'Unknown error'
       // Log details for debugging
-      // eslint-disable-next-line no-console
       console.error('AI error:', e)
       setMessages((m) => [...m, { role: 'assistant', content: `Error contacting AI: ${message}` }])
     } finally {
@@ -36,32 +35,21 @@ export default function ChatbotPage() {
   }
 
   return (
-    <div className="page-glass-wrapper">
-      <div className="glass-container glass-border" style={{ maxWidth: 800, padding: '40px', zIndex: 2, minHeight: '700px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <h2 style={{ 
-            fontSize: 'clamp(28px, 4vw, 36px)', 
-            fontWeight: 700,
-            background: 'linear-gradient(135deg, var(--text), var(--accent), #4f9ff5)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            margin: 0,
-            textShadow: '0 2px 4px rgba(96, 165, 250, 0.2)'
-          }}>
-            AI Resume Assistant
-          </h2>
-          <p style={{ color: 'var(--muted)', marginTop: '8px', fontSize: '16px' }}>
-            Get personalized help from AI to improve your resume
-          </p>
+    <div style={{ padding: '24px 16px' }}>
+      <div style={{ maxWidth: 800, margin: '0 auto' }}>
+        <div style={{ marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 700, margin: 0 }}>AI Resume Assistant</h2>
+          <p style={{ color: 'var(--muted)', marginTop: '6px', fontSize: '14px' }}>Get help from AI to improve your resume</p>
         </div>
 
-        <div style={{ display: 'grid', gap: '20px', height: '600px' }}>
+        <div style={{ display: 'grid', gap: '12px', height: '600px' }}>
           {/* Chat Messages Area */}
-          <div className="glass-container" style={{ 
-            padding: '24px', 
+          <div style={{ 
+            padding: '16px', 
             minHeight: '400px',
-            background: 'rgba(255, 255, 255, 0.02)',
+            background: 'transparent',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '8px',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden'
@@ -88,10 +76,12 @@ export default function ChatbotPage() {
               <div style={{ 
                 flex: 1, 
                 overflowY: 'auto', 
-                paddingRight: '12px',
+                paddingRight: '8px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '20px'
+                gap: '12px',
+                overflowWrap: 'anywhere',
+                wordBreak: 'break-word'
               }}>
                 {messages.map((m, idx) => (
                   <div key={idx} style={{ 
@@ -119,16 +109,17 @@ export default function ChatbotPage() {
                         </>
                       )}
                     </div>
-                    <div className="glass-container" style={{
-                      padding: '16px',
-                      background: m.role === 'user' 
-                        ? 'rgba(96, 165, 250, 0.1)' 
-                        : 'rgba(255, 255, 255, 0.03)',
-                      border: m.role === 'user' 
-                        ? '1px solid rgba(96, 165, 250, 0.2)' 
-                        : '1px solid rgba(255, 255, 255, 0.1)',
+                    <div style={{
+                      padding: '12px',
+                      background: m.role === 'user' ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      borderRadius: '8px',
                       fontSize: '15px',
-                      lineHeight: '1.5'
+                      lineHeight: '1.5',
+                      maxWidth: '100%',
+                      overflowX: 'auto',
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word'
                     }}>
                       {m.role === 'assistant' ? (
                         <ReactMarkdown>{m.content}</ReactMarkdown>
@@ -167,21 +158,20 @@ export default function ChatbotPage() {
           </div>
 
           {/* Input Area */}
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
             <input 
-              className="glass-input"
+              
               value={input} 
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Ask for resume help..." 
-              style={{ flex: 1 }}
+              style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'var(--text)' }}
               disabled={isLoading}
             />
             <button 
-              className="glass-button" 
               onClick={send}
               disabled={isLoading || !input.trim()}
-              style={{ minWidth: '100px' }}
+              style={{ minWidth: '90px' }}
             >
               {isLoading ? (
                 <div style={{ 

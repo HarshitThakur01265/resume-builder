@@ -88,7 +88,7 @@ export default function ResumesPage() {
             <p style={{ color: 'var(--muted)', marginBottom: '24px' }}>
               Create your first resume using our editor
             </p>
-            <Link to="/editor">
+            <Link to="/choose-profile">
               <button className="glass-button">
                 Create Resume
               </button>
@@ -199,7 +199,7 @@ export default function ResumesPage() {
             ))}
             
             <div style={{ marginTop: '40px', textAlign: 'center' }}>
-              <Link to="/editor">
+              <Link to="/choose-profile">
                 <button className="glass-button" style={{ fontSize: '16px', padding: '16px 32px' }}>
                   ➕ Create New Resume
                 </button>
