@@ -61,6 +61,7 @@ function Layout({ children }) {
 function Home() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
+  const [revealed, setRevealed] = useState({ hero: false, how: false, cta: false })
   
   const quotes = [
     {
@@ -122,28 +123,44 @@ function Home() {
     if (e.key === 'ArrowLeft') prevSlide()
   }
 
+  useEffect(() => {
+    const entriesMap = { hero: null, how: null, cta: null }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        const key = entry.target.getAttribute('data-reveal-key')
+        if (entry.isIntersecting && key) {
+          setRevealed((prev) => ({ ...prev, [key]: true }))
+          io.unobserve(entry.target)
+        }
+      })
+    }, { threshold: 0.15 })
+
+    const heroEl = document.querySelector('[data-reveal-key="hero"]')
+    const howEl = document.querySelector('[data-reveal-key="how"]')
+    const ctaEl = document.querySelector('[data-reveal-key="cta"]')
+    if (heroEl) io.observe(heroEl)
+    if (howEl) io.observe(howEl)
+    if (ctaEl) io.observe(ctaEl)
+    return () => io.disconnect()
+  }, [])
+
   return (
     <div className="home-container">
-      {/* Hero Illustration */}
-      <div className="hero-illustration">
-        <img 
-          src={heroIllustration} 
-          alt="Professional resume building illustration"
-          className="hero-image"
-        />
-      </div>
-      
-      {/* Typing Resume Effect */}
-      <div style={{ margin: '20px 0' }}>
-        <HomeTypingEffect />
-      </div>
-
-      {/* Interactive Resume Templates */}
-      <div style={{ margin: '30px 0' }}>
-        <h2 style={{ margin: '0 0 10px' }}>Try a template</h2>
-        <p style={{ margin: '0 0 14px', color: 'var(--muted-text, #cbd5e1)' }}>Hover and click to preview how your resume could look.</p>
+      {/* Product-first Hero: headline + template previews */}
+      <section data-reveal-key="hero" className={revealed.hero ? 'reveal-in' : ''} style={{ width: '100%', maxWidth: '1100px', margin: '0 auto 26px', transition: 'opacity .6s ease, transform .6s ease', opacity: revealed.hero ? 1 : 0, transform: revealed.hero ? 'none' : 'translateY(16px)' }}>
+        <h1 style={{
+          margin: 0,
+          fontSize: 'clamp(28px, 5vw, 48px)',
+          fontWeight: 800,
+          letterSpacing: '-0.02em'
+        }}>
+          Build a resume that gets you hired<span style={{ color: 'var(--accent)' }}>.</span>
+        </h1>
+        <p style={{ margin: '8px 0 16px', color: 'var(--muted)', fontSize: 'clamp(14px, 2vw, 18px)' }}>
+          Create, customize, and download a professional resume in minutes with our stunning templates.
+        </p>
         <TemplatePreviewGrid />
-      </div>
+      </section>
 
       {/* Floating AI Assistant teaser */}
       <FloatingAITeaser
@@ -151,62 +168,45 @@ function Home() {
         imageUrl="https://i.pinimg.com/originals/8c/fe/6d/8cfe6d7b4d9b1d9e8b2c33e28a2a4fd5.jpg"
       />
 
-      
-      
-      <div
-        className="quote-carousel"
-        onMouseEnter={() => setIsPaused(true)}
-        onMouseLeave={() => setIsPaused(false)}
-        onKeyDown={handleKeyDown}
-        role="region"
-        aria-roledescription="carousel"
-        aria-label="Quotes carousel"
-        tabIndex={0}
-      >
-        <div
-          className="quote-slides-container"
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-        >
-          <div 
-            className="quote-slides" 
-            style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-          >
-            {quotes.map((quote, index) => (
-              <div
-                key={index}
-                className="quote-slide"
-                role="group"
-                aria-roledescription="slide"
-                aria-label={`Slide ${index + 1} of ${quotes.length}`}
-              >
-                <div className="quote-section">
-                  <div className="quote-mark">"</div>
-                  <blockquote className="inspirational-quote">
-                    {quote.text}
-                  </blockquote>
-                  <div className="quote-author">— {quote.author}</div>
-                </div>
-              </div>
-            ))}
+      {/* How it works */}
+      <section data-reveal-key="how" className={revealed.how ? 'reveal-in' : ''} style={{ width: '100%', maxWidth: '1100px', margin: '24px auto 10px', transition: 'opacity .6s ease, transform .6s ease', opacity: revealed.how ? 1 : 0, transform: revealed.how ? 'none' : 'translateY(16px)' }}>
+        <h3 style={{ margin: '0 0 10px' }}>How it works</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+          <div className="glass-container" style={{ padding: '16px', display: 'flex', gap: 12 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--accent)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800 }}>1</div>
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Pick a template</div>
+              <div style={{ color: 'var(--muted)', fontSize: 14 }}>Choose from professionally designed, field-tested templates.</div>
+            </div>
+          </div>
+          <div className="glass-container" style={{ padding: '16px', display: 'flex', gap: 12 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--accent)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800 }}>2</div>
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Add your story</div>
+              <div style={{ color: 'var(--muted)', fontSize: 14 }}>Use the simple editor and AI tips to fill in your details.</div>
+            </div>
+          </div>
+          <div className="glass-container" style={{ padding: '16px', display: 'flex', gap: 12 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--accent)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800 }}>3</div>
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Download & apply</div>
+              <div style={{ color: 'var(--muted)', fontSize: 14 }}>Export to PDF and start applying with confidence.</div>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Single testimonial */}
+      <section className="quote-section" style={{ maxWidth: 800, margin: '18px auto 0' }}>
+        <div className="quote-mark">"</div>
+        <blockquote className="inspirational-quote">
+          First impressions matter. Make yours count with a professional resume.
+        </blockquote>
+        <div className="quote-author">— Resumify</div>
+      </section>
       
-      <div className="slide-indicators">
-        {quotes.map((_, index) => (
-          <button
-            key={index}
-            className={`indicator ${index === currentSlide ? 'active' : ''}`}
-            onClick={() => setCurrentSlide(index)}
-            aria-label={`Go to slide ${index + 1}`}
-            aria-current={index === currentSlide ? 'true' : undefined}
-          />
-        ))}
-      </div>
-      
-      <div className="home-content">
-        <h1>Resume Builder</h1>
+      <div data-reveal-key="cta" className={`home-content ${revealed.cta ? 'reveal-in' : ''}`} style={{ opacity: revealed.cta ? undefined : 0, transform: revealed.cta ? undefined : 'translateY(20px)' }}>
+        <h1>Ready to get started<span style={{ color: 'var(--accent)' }}>?</span></h1>
         <p>Create professional resumes that stand out from the crowd.</p>
         <div className="cta-buttons">
           <Link to="/auth" className="cta-primary">

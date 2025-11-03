@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import PreviewCanvas from './PreviewCanvas'
 
 const demoResumes = [
@@ -43,6 +43,22 @@ const demoResumes = [
 export default function TemplatePreviewGrid({ onSelect }) {
   const [selected, setSelected] = useState(null)
   const [hoveredId, setHoveredId] = useState(null)
+  const [activeId, setActiveId] = useState(demoResumes[0]?.id)
+  const rowRef = useRef(null)
+  const indicatorRef = useRef(null)
+
+  useEffect(() => {
+    const row = rowRef.current
+    const indicator = indicatorRef.current
+    if (!row || !indicator || !activeId) return
+    const btn = row.querySelector(`[data-id="${activeId}"]`)
+    if (!btn) return
+    const rowRect = row.getBoundingClientRect()
+    const btnRect = btn.getBoundingClientRect()
+    const left = btnRect.left - rowRect.left + row.scrollLeft
+    indicator.style.width = `${btnRect.width - 24}px`
+    indicator.style.transform = `translateX(${left + 12}px)`
+  }, [activeId])
 
   const handleSelect = (item) => {
     setSelected(item)
@@ -51,22 +67,36 @@ export default function TemplatePreviewGrid({ onSelect }) {
 
   return (
     <div>
-      <div style={{
+      <div ref={rowRef} style={{
         display: 'flex',
         gap: '16px',
         overflowX: 'auto',
         paddingBottom: '8px',
-        WebkitOverflowScrolling: 'touch'
+        WebkitOverflowScrolling: 'touch',
+        position: 'relative'
       }}>
+        {/* Sliding active indicator */}
+        <div ref={indicatorRef} aria-hidden="true" style={{
+          position: 'absolute',
+          height: '3px',
+          bottom: '4px',
+          left: 0,
+          width: 0,
+          background: 'linear-gradient(90deg, var(--accent), rgba(96,165,250,0.8))',
+          borderRadius: '999px',
+          transition: 'transform 300ms ease, width 300ms ease',
+          pointerEvents: 'none'
+        }} />
         {demoResumes.map((item) => (
           <button
             key={item.id}
             onClick={() => handleSelect(item)}
             aria-label={`Preview ${item.name} template`}
+            data-id={item.id}
             style={{
               cursor: 'pointer',
               textAlign: 'left',
-              border: '1px solid rgba(255,255,255,0.15)',
+              border: '2px solid transparent',
               borderRadius: '12px',
               background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(147, 51, 234, 0.08))',
               padding: '12px',
@@ -79,16 +109,22 @@ export default function TemplatePreviewGrid({ onSelect }) {
             }}
             onMouseEnter={(e) => {
               setHoveredId(item.id)
-              e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)'
+              e.currentTarget.style.transform = 'translateY(-4px) scale(1.03)'
               e.currentTarget.style.boxShadow = '0 10px 22px rgba(0,0,0,0.2)'
               e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(147, 51, 234, 0.12))'
+              e.currentTarget.style.borderImage = 'linear-gradient(90deg, var(--accent), rgba(96,165,250,0.8)) 1'
+              e.currentTarget.style.border = '2px solid transparent'
             }}
             onMouseLeave={(e) => {
               setHoveredId(null)
               e.currentTarget.style.transform = 'none'
               e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.15)'
               e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(147, 51, 234, 0.08))'
+              e.currentTarget.style.borderImage = ''
+              e.currentTarget.style.border = '2px solid transparent'
             }}
+            onFocus={() => setActiveId(item.id)}
+            onClickCapture={() => setActiveId(item.id)}
           >
             <div style={{
               fontSize: '12px',
@@ -105,7 +141,7 @@ export default function TemplatePreviewGrid({ onSelect }) {
                 position: 'relative',
                 height: '260px',
                 transformStyle: 'preserve-3d',
-                transition: 'transform 500ms ease',
+                transition: 'transform 500ms ease, opacity 200ms ease',
                 transform: hoveredId === item.id ? 'rotateY(180deg)' : 'rotateY(0deg)'
               }}>
                 {/* Front face */}
@@ -119,9 +155,11 @@ export default function TemplatePreviewGrid({ onSelect }) {
                   overflow: 'hidden',
                   backfaceVisibility: 'hidden'
                 }}>
-                  <div style={{ transform: 'scale(0.6)', transformOrigin: 'top left' }}>
-                    <PreviewCanvas resume={item.resume} />
-                  </div>
+                  <FadeIn key={`${item.id}-front`}>
+                    <div style={{ transform: 'scale(0.6)', transformOrigin: 'top left' }}>
+                      <PreviewCanvas resume={item.resume} />
+                    </div>
+                  </FadeIn>
                 </div>
                 {/* Back face */}
                 <div style={{
@@ -185,9 +223,11 @@ export default function TemplatePreviewGrid({ onSelect }) {
             }}>×</button>
             <div style={{ padding: '20px' }}>
               <h3 style={{ marginTop: 0 }}>{selected.name} Template Preview</h3>
-              <div style={{ border: '1px solid #eee', borderRadius: '8px', overflow: 'hidden' }}>
-                <PreviewCanvas resume={selected.resume} />
-              </div>
+              <CrossFade key={selected.id}>
+                <div style={{ border: '1px solid #eee', borderRadius: '8px', overflow: 'hidden' }}>
+                  <PreviewCanvas resume={selected.resume} />
+                </div>
+              </CrossFade>
               <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '12px', color: '#555' }}>This is how your resume will look.</span>
               </div>
@@ -195,6 +235,34 @@ export default function TemplatePreviewGrid({ onSelect }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function FadeIn({ children }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.opacity = '0'
+    requestAnimationFrame(() => {
+      el.style.transition = 'opacity 250ms ease'
+      el.style.opacity = '1'
+    })
+  }, [])
+  return <div ref={ref}>{children}</div>
+}
+
+function CrossFade({ children }) {
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    setVisible(false)
+    const id = requestAnimationFrame(() => setVisible(true))
+    return () => cancelAnimationFrame(id)
+  }, [children])
+  return (
+    <div style={{ opacity: visible ? 1 : 0, transition: 'opacity 250ms ease' }}>
+      {children}
     </div>
   )
 }
