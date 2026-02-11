@@ -1,3 +1,17 @@
+# Resumify
+
+Build and export professional resumes with templates and AI assistance.
+
+## Environment
+
+- Copy `.env.example` to `.env` and set:
+  - `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (from Supabase Dashboard → Project Settings → API).
+- **Gemini API key** is not set in the frontend. Configure it in Supabase:
+  - Dashboard → Project Settings → Edge Functions → Secrets: add `GEMINI_API_KEY`.
+  - Optionally add `GEMINI_MODEL` (e.g. `gemini-2.0-flash` or `gemini-1.5-flash-002`).
+
+---
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

@@ -10,18 +10,35 @@ export default function ProjectsGrid({ projects = [], resumeTitle }) {
 
   return (
     <div>
-      <h3 style={{ margin: '0 0 12px', color: 'var(--text)' }}>Projects</h3>
+      <h3
+        style={{
+          margin: '0 0 12px',
+          color: '#0f172a',
+          fontFamily: 'Inter, system-ui, sans-serif',
+          fontWeight: 800,
+          fontSize: 20,
+          letterSpacing: '0.02em',
+          textTransform: 'uppercase'
+        }}
+      >
+        Projects
+      </h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '14px' }}>
         {projects.map((p, idx) => (
           <button
             key={idx}
-            className="glass-container glass-border"
+            type="button"
+            className="glass-container glass-border project-card-button"
             onClick={() => open(p)}
             style={{
-              textAlign: 'left', padding: '14px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)'
+              textAlign: 'left',
+              padding: '16px',
+              borderRadius: 16,
+              border: '1px solid rgba(148, 163, 184, 0.25)',
+              background: 'rgba(15, 23, 42, 0.9)'
             }}
           >
-            <div style={{ fontWeight: 600, color: 'var(--text)' }}>{p.title || 'Untitled Project'}</div>
+            <div style={{ fontWeight: 600, color: '#f8fafc', fontSize: 15 }}>{p.title || 'Untitled Project'}</div>
             {p.shortDescription && (
               <div style={{ color: 'var(--muted)', marginTop: 6 }}>{p.shortDescription}</div>
             )}

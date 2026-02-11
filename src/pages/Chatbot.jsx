@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { askGemini } from '../services/gemini'
+import { askGemini, sanitizeAiText } from '../services/gemini'
 import ReactMarkdown from 'react-markdown'
 
 export default function ChatbotPage() {
@@ -16,7 +16,8 @@ export default function ChatbotPage() {
 
     try {
       const text = await askGemini(content)
-      setMessages((m) => [...m, { role: 'assistant', content: text || 'No response' }])
+      const safe = sanitizeAiText(text || 'No response', 4000)
+      setMessages((m) => [...m, { role: 'assistant', content: safe }])
     } catch (e) {
       const message = (e && e.message) ? e.message : 'Unknown error'
       // Log details for debugging

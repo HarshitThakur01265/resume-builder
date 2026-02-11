@@ -14,6 +14,7 @@ import FloatingAITeaser from './components/FloatingAITeaser'
 import MagicClick from './components/MagicClick'
 import AnimatedSideDrawer from './components/AnimatedSideDrawer'
 import HamburgerMenu from './components/HamburgerMenu'
+import SplashScreen from './components/SplashScreen'
 import './App.css'
 import heroIllustration from './assets/hero-illustration.svg'
 
@@ -54,6 +55,8 @@ function Layout({ children }) {
         theme={theme}
         setTheme={setTheme}
       />
+      {/* Floating AI Assistant - Available on all pages */}
+      <FloatingAITeaser corner="bottom-right" />
     </div>
   )
 }
@@ -145,9 +148,41 @@ function Home() {
   }, [])
 
   return (
-    <div className="home-container">
+    <div className="home-container" style={{ position: 'relative', overflow: 'hidden' }}>
+      {/* Video Background */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          zIndex: -1,
+          pointerEvents: 'none'
+        }}
+      >
+        <source src="/background-video.mp4" type="video/mp4" />
+      </video>
+      {/* Overlay for better content readability */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: 'rgba(11, 15, 25, 0.6)',
+          zIndex: -1,
+          pointerEvents: 'none'
+        }}
+      />
       {/* Product-first Hero: headline + template previews */}
-      <section data-reveal-key="hero" className={revealed.hero ? 'reveal-in' : ''} style={{ width: '100%', maxWidth: '1100px', margin: '0 auto 26px', transition: 'opacity .6s ease, transform .6s ease', opacity: revealed.hero ? 1 : 0, transform: revealed.hero ? 'none' : 'translateY(16px)' }}>
+      <section data-reveal-key="hero" className={revealed.hero ? 'reveal-in' : ''} style={{ width: '100%', maxWidth: '1100px', margin: '0 auto 26px', transition: 'opacity .6s ease, transform .6s ease', opacity: revealed.hero ? 1 : 0, transform: revealed.hero ? 'none' : 'translateY(16px)', position: 'relative', zIndex: 1 }}>
         <h1 style={{
           margin: 0,
           fontSize: 'clamp(28px, 5vw, 48px)',
@@ -162,14 +197,8 @@ function Home() {
         <TemplatePreviewGrid />
       </section>
 
-      {/* Floating AI Assistant teaser */}
-      <FloatingAITeaser
-        corner="bottom-right"
-        imageUrl="https://i.pinimg.com/originals/8c/fe/6d/8cfe6d7b4d9b1d9e8b2c33e28a2a4fd5.jpg"
-      />
-
       {/* How it works */}
-      <section data-reveal-key="how" className={revealed.how ? 'reveal-in' : ''} style={{ width: '100%', maxWidth: '1100px', margin: '24px auto 10px', transition: 'opacity .6s ease, transform .6s ease', opacity: revealed.how ? 1 : 0, transform: revealed.how ? 'none' : 'translateY(16px)' }}>
+      <section data-reveal-key="how" className={revealed.how ? 'reveal-in' : ''} style={{ width: '100%', maxWidth: '1100px', margin: '24px auto 10px', transition: 'opacity .6s ease, transform .6s ease', opacity: revealed.how ? 1 : 0, transform: revealed.how ? 'none' : 'translateY(16px)', position: 'relative', zIndex: 1 }}>
         <h3 style={{ margin: '0 0 10px' }}>How it works</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
           <div className="glass-container" style={{ padding: '16px', display: 'flex', gap: 12 }}>
@@ -197,7 +226,7 @@ function Home() {
       </section>
 
       {/* Single testimonial */}
-      <section className="quote-section" style={{ maxWidth: 800, margin: '18px auto 0' }}>
+      <section className="quote-section" style={{ maxWidth: 800, margin: '18px auto 0', position: 'relative', zIndex: 1 }}>
         <div className="quote-mark">"</div>
         <blockquote className="inspirational-quote">
           First impressions matter. Make yours count with a professional resume.
@@ -205,7 +234,7 @@ function Home() {
         <div className="quote-author">— Resumify</div>
       </section>
       
-      <div data-reveal-key="cta" className={`home-content ${revealed.cta ? 'reveal-in' : ''}`} style={{ opacity: revealed.cta ? undefined : 0, transform: revealed.cta ? undefined : 'translateY(20px)' }}>
+      <div data-reveal-key="cta" className={`home-content ${revealed.cta ? 'reveal-in' : ''}`} style={{ opacity: revealed.cta ? undefined : 0, transform: revealed.cta ? undefined : 'translateY(20px)', position: 'relative', zIndex: 1 }}>
         <h1>Ready to get started<span style={{ color: 'var(--accent)' }}>?</span></h1>
         <p>Create professional resumes that stand out from the crowd.</p>
         <div className="cta-buttons">
@@ -222,6 +251,25 @@ function Home() {
 }
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true)
+
+  useEffect(() => {
+    // Check if splash has been shown in this session
+    const splashShown = sessionStorage.getItem('splashShown')
+    if (splashShown === 'true') {
+      setShowSplash(false)
+    }
+  }, [])
+
+  const handleSplashComplete = () => {
+    sessionStorage.setItem('splashShown', 'true')
+    setShowSplash(false)
+  }
+
+  if (showSplash) {
+    return <SplashScreen onComplete={handleSplashComplete} />
+  }
+
   return (
     <Layout>
       <Routes>

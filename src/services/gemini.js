@@ -1,9 +1,7 @@
 import { supabase } from '../lib/supabaseClient'
 
-const PUBLIC_GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY
-const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.5-flash'
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY
+// API key is only on the server (Edge Function). No VITE_GEMINI_* in frontend.
 
 // --- 1) Greeting detector ---
 function isGreeting(prompt) {
@@ -39,49 +37,33 @@ export async function askGemini(prompt, options = {}) {
     }
   }
 
-  // 1) Direct Gemini API call
-  if (PUBLIC_GEMINI_KEY) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${PUBLIC_GEMINI_KEY}`
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-    })
-    const data = await resp.json()
-    if (!resp.ok) throw new Error(data?.error?.message || 'Gemini error')
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
-  }
-
-  // 2) Supabase Edge Function
+  // 1) Supabase Edge Function (API key stays on server)
   if (supabase) {
     const { data, error } = await supabase.functions.invoke('ask-gemini', { body: { prompt } })
     if (error) throw new Error(error.message || 'Edge function error')
     return data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
   }
 
-  // 3) Fallback REST call
-  const bases = [SUPABASE_URL, 'http://127.0.0.1:54321', ''].filter(Boolean)
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(SUPABASE_ANON ? { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } : {})
-  }
-  let lastError
-  for (const base of bases) {
-    try {
-      const resp = await fetch(`${base}/functions/v1/ask-gemini`, {
-        method: 'POST', headers, body: JSON.stringify({ prompt })
-      })
-      const data = await resp.json().catch(() => ({}))
-      if (!resp.ok) throw new Error(data?.error || `HTTP ${resp.status}`)
-      return data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
-    } catch (e) {
-      lastError = e
-    }
-  }
-  throw new Error(lastError?.message || 'AI request failed')
+  // 2) Fallback: REST to Edge Function (no API key in client)
+  const base = SUPABASE_URL || 'http://127.0.0.1:54321'
+  const resp = await fetch(`${base}/functions/v1/ask-gemini`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt })
+  })
+  const data = await resp.json().catch(() => ({}))
+  if (!resp.ok) throw new Error(data?.error?.message || data?.error || `HTTP ${resp.status}`)
+  return data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
 }
 
-// --- 4) Example helper ---
+// --- 4) Sanitize AI output for safe display (limit length, strip HTML) ---
+export function sanitizeAiText(text, maxLength = 2000) {
+  if (text == null || typeof text !== 'string') return ''
+  const stripped = text.replace(/<[^>]*>/g, '').trim()
+  return stripped.slice(0, maxLength)
+}
+
+// --- 5) Example helper ---
 export async function suggestMissingSkills(resumeText, jobDescription) {
   const prompt = `Here is a resume:\n${resumeText}\n\nHere is a job description:\n${jobDescription}\n\nSuggest 5 missing skills the resume should include. Return as a simple bullet list.`
   return askGemini(prompt)

@@ -1,8 +1,8 @@
 import { useForm } from 'react-hook-form'
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { saveResume } from '../services/resumes'
-import { suggestMissingSkills } from '../services/gemini'
+import { saveResume, getResume, updateResume } from '../services/resumes'
+import { suggestMissingSkills, sanitizeAiText } from '../services/gemini'
 import LottieAnimation from '../components/LottieAnimation'
 import loadingAnimation from '../assets/animations/loading.json'
 import successAnimation from '../assets/animations/success.json'
@@ -26,6 +26,7 @@ const defaultValues = {
     summary: '',
     education: [{ degree: '', year: '' }],
     experience: [{ role: '', company: '', period: '', summary: '' }],
+    hasNoExperience: false,
     skills: [''],
     projects: [
       {
@@ -46,8 +47,10 @@ const defaultValues = {
 export default function EditorPage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const resumeId = searchParams.get('id')
   const templateFromUrl = searchParams.get('template')
   const profileFromUrl = searchParams.get('profile')
+  const isEditing = Boolean(resumeId)
   
   const formDefaultValues = {
     ...defaultValues,
@@ -55,10 +58,14 @@ export default function EditorPage() {
     template: templateFromUrl || defaultValues.template
   }
   
-  const { register, handleSubmit, getValues, setValue } = useForm({ defaultValues: formDefaultValues })
+  const { register, handleSubmit, getValues, setValue, reset, watch } = useForm({ defaultValues: formDefaultValues })
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingData, setIsLoadingData] = useState(isEditing) // Start as true if editing, false if creating
   const [isSuccess, setIsSuccess] = useState(false)
   const [isSuggesting, setIsSuggesting] = useState(false)
+  const [suggestionModal, setSuggestionModal] = useState({ open: false, text: '' })
+  const [dataLoaded, setDataLoaded] = useState(!isEditing) // If not editing, data is "loaded" (using defaults)
+  const hasNoExperience = watch('content.hasNoExperience')
   const p = (profileFromUrl || 'general').toLowerCase()
   const isSoftware = p === 'software'
   const isCreative = p === 'creative'
@@ -67,15 +74,88 @@ export default function EditorPage() {
   const isBusiness = p === 'business'
 
 
-  // Update template when URL parameter changes
+  // If editing, load existing resume and prefill the form
   useEffect(() => {
-    if (templateFromUrl) {
+    const loadExisting = async () => {
+      if (!isEditing) {
+        setIsLoadingData(false)
+        return
+      }
+      try {
+        setIsLoadingData(true)
+        const existing = await getResume(resumeId)
+        if (!existing) {
+          alert('Resume not found')
+          navigate('/resumes')
+          return
+        }
+        // We stored the whole form object in `content` when saving,
+        // so we can restore the form by resetting with that object.
+        const storedForm = existing.content
+        console.log('Loading resume for edit - existing:', existing)
+        console.log('Loading resume for edit - storedForm:', storedForm)
+        
+        if (storedForm && typeof storedForm === 'object') {
+          // storedForm is the entire form object: { title, template, profile, content: {...} }
+          // Merge with defaults to ensure all fields exist
+          const mergedForm = {
+            ...formDefaultValues,
+            ...storedForm,
+            // Ensure content object is properly structured
+            content: {
+              ...formDefaultValues.content,
+              ...(storedForm.content || {}),
+              // Handle hasNoExperience - check if experience is empty
+              hasNoExperience: (() => {
+                const exp = storedForm.content?.experience || []
+                if (storedForm.content?.hasNoExperience !== undefined) {
+                  return storedForm.content.hasNoExperience
+                }
+                return exp.length === 0 || (exp.length === 1 && (!exp[0]?.role || exp[0].role.trim() === ''))
+              })()
+            }
+          }
+          
+          console.log('Loading resume for edit - mergedForm to reset:', mergedForm)
+          
+          // Use setTimeout to ensure form is ready before resetting
+          setTimeout(() => {
+            reset(mergedForm)
+            setDataLoaded(true)
+          }, 100)
+        } else {
+          // Fallback: at least keep the title from top-level column
+          console.warn('No stored form data found, using defaults')
+          reset({
+            ...formDefaultValues,
+            title: existing.title || formDefaultValues.title
+          })
+          setDataLoaded(true)
+        }
+      } catch (e) {
+        console.error('Failed to load resume for editing:', e)
+        alert('Failed to load resume for editing. Please try again.')
+        navigate('/resumes')
+        setDataLoaded(true) // Set to true even on error so form can render
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+    loadExisting()
+    // only run on mount / id change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditing, resumeId])
+
+  // Update template when URL parameter changes (only in create mode)
+  useEffect(() => {
+    if (!isEditing && templateFromUrl) {
       setValue('template', templateFromUrl)
     }
-  }, [templateFromUrl, setValue])
+  }, [templateFromUrl, setValue, isEditing])
 
-  // Update profile when URL parameter changes (set some tailored defaults)
+  // Update profile when URL parameter changes (set some tailored defaults) in create mode
   useEffect(() => {
+    if (isEditing) return
     const p = (profileFromUrl || '').toLowerCase()
     if (!p) return
     setValue('profile', p)
@@ -95,34 +175,69 @@ export default function EditorPage() {
       setValue('title', 'Business / Finance Resume')
       setValue('template', 'business')
     }
-  }, [profileFromUrl, setValue])
+  }, [profileFromUrl, setValue, isEditing])
+
+  // Clear experience fields when "No Experience" is checked
+  useEffect(() => {
+    if (hasNoExperience) {
+      setValue('content.experience.0.role', '')
+      setValue('content.experience.0.company', '')
+      setValue('content.experience.0.location', '')
+      setValue('content.experience.0.startDate', '')
+      setValue('content.experience.0.endDate', '')
+      setValue('content.experience.0.responsibilities', '')
+      setValue('content.experience.0.achievements', '')
+    }
+  }, [hasNoExperience, setValue])
 
   const onSubmit = async (data) => {
     try {
       setIsLoading(true)
       setIsSuccess(false)
       
-      // Save resume to database
-      const savedResume = await saveResume(data)
+      // Ensure title is not empty
+      if (!data.title || data.title.trim() === '') {
+        data.title = 'Frontend Developer Resume'
+      }
+      
+      // If "No Experience" is selected, clear the experience array
+      if (data.content?.hasNoExperience) {
+        data.content.experience = []
+      }
+      
+      let savedResume
+      if (isEditing) {
+        // Update existing resume
+        savedResume = await updateResume(resumeId, data)
+      } else {
+        // Save new resume to database
+        savedResume = await saveResume(data)
+      }
       console.log('Resume saved:', savedResume)
+      
+      if (!savedResume) {
+        throw new Error('Resume was not saved. Please try again.')
+      }
       
       setIsLoading(false)
       setIsSuccess(true)
       
       // Navigate to preview page after successful save
       setTimeout(() => {
-        navigate('/preview')
+        navigate(`/preview?id=${savedResume.id}`)
       }, 1500)
       
     } catch (e) {
       setIsLoading(false)
+      setIsSuccess(false)
       const message = e?.message || 'Unknown error'
+      console.error('Save error:', e)
       if (message.includes('Not authenticated')) {
         alert('Please sign in to save your resume.')
         navigate('/auth')
         return
       }
-      alert('Save failed: ' + message)
+      alert('Save failed: ' + message + '\n\nPlease check your connection and try again.')
     }
   }
 
@@ -130,13 +245,13 @@ export default function EditorPage() {
     const values = getValues()
     const resumeText = `${values.title}\n\n${values.content.summary}\n\nSkills: ${values.content.skills.join(', ')}`
     const jobDescription = 'Software Developer position requiring technical skills and experience'
-    
     try {
       setIsSuggesting(true)
-      const suggestions = await suggestMissingSkills(resumeText, jobDescription)
-      alert(`AI Skill Suggestions:\n\n${suggestions}`)
+      const raw = await suggestMissingSkills(resumeText, jobDescription)
+      const safe = sanitizeAiText(raw, 2000)
+      setSuggestionModal({ open: true, text: safe || 'No suggestions returned.' })
     } catch (e) {
-      alert('Failed to get suggestions: ' + e.message)
+      setSuggestionModal({ open: true, text: 'Failed to get suggestions: ' + (e?.message || 'Unknown error') })
     } finally {
       setIsSuggesting(false)
     }
@@ -191,7 +306,22 @@ export default function EditorPage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
+        {isLoadingData && (
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <LottieAnimation
+              animationData={loadingAnimation}
+              width={60}
+              height={60}
+              className="loading-animation"
+              loop={true}
+              autoplay={true}
+            />
+            <p style={{ marginTop: '16px', color: 'var(--muted)', fontSize: '16px' }}>Loading your resume data...</p>
+          </div>
+        )}
+
+        {!isLoadingData && (
+          <form key={dataLoaded ? 'form-loaded' : 'form-loading'} onSubmit={handleSubmit(onSubmit)}>
           <input type="hidden" {...register('profile')} />
           <div className="form-grid" style={{ gap: '20px' }}>
             <div className="glass-container" style={{ padding: '24px' }}>
@@ -336,36 +466,48 @@ export default function EditorPage() {
 
             <div className="glass-container" style={{ padding: '24px' }}>
               <h3 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '18px', fontWeight: 600 }}>Experience</h3>
-              <div style={{ display: 'grid', gap: '16px' }}>
+              <div style={{ marginBottom: '20px', padding: '12px', background: 'rgba(96, 165, 250, 0.05)', borderRadius: '8px', border: '1px solid rgba(96, 165, 250, 0.2)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                  <input 
+                    type="checkbox" 
+                    {...register('content.hasNoExperience')}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <span style={{ color: 'var(--text)', fontSize: '14px', fontWeight: 500 }}>
+                    I don't have any work experience (NA)
+                  </span>
+                </label>
+              </div>
+              <div style={{ display: 'grid', gap: '16px', opacity: hasNoExperience ? 0.5 : 1, pointerEvents: hasNoExperience ? 'none' : 'auto' }}>
                 <label style={{ gap: '8px' }}>
                   <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Role</span>
-                  <input className="glass-input" {...register('content.experience.0.role')} placeholder="Software Developer" />
+                  <input className="glass-input" {...register('content.experience.0.role')} placeholder="Software Developer" disabled={hasNoExperience} />
                 </label>
                 <label style={{ gap: '8px' }}>
                   <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Company</span>
-                  <input className="glass-input" {...register('content.experience.0.company')} placeholder="Tech Company Inc." />
+                  <input className="glass-input" {...register('content.experience.0.company')} placeholder="Tech Company Inc." disabled={hasNoExperience} />
                 </label>
                 <label style={{ gap: '8px' }}>
                   <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Location</span>
-                  <input className="glass-input" {...register('content.experience.0.location')} placeholder="City, Country" />
+                  <input className="glass-input" {...register('content.experience.0.location')} placeholder="City, Country" disabled={hasNoExperience} />
                 </label>
                 <label style={{ gap: '8px' }}>
                   <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Start Date</span>
-                  <input className="glass-input" {...register('content.experience.0.startDate')} placeholder="2022-01" />
+                  <input className="glass-input" {...register('content.experience.0.startDate')} placeholder="2022-01" disabled={hasNoExperience} />
                 </label>
                 <label style={{ gap: '8px' }}>
                   <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>End Date</span>
-                  <input className="glass-input" {...register('content.experience.0.endDate')} placeholder="2024-12 or Present" />
+                  <input className="glass-input" {...register('content.experience.0.endDate')} placeholder="2024-12 or Present" disabled={hasNoExperience} />
                 </label>
                 {!isMarketing && (
                   <label style={{ gap: '8px' }}>
                     <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Responsibilities</span>
-                    <textarea className="glass-input" {...register('content.experience.0.responsibilities')} placeholder="Use bullet points for responsibilities and impact" style={{ minHeight: '80px', resize: 'vertical' }} />
+                    <textarea className="glass-input" {...register('content.experience.0.responsibilities')} placeholder="Use bullet points for responsibilities and impact" style={{ minHeight: '80px', resize: 'vertical' }} disabled={hasNoExperience} />
                   </label>
                 )}
                 <label style={{ gap: '8px' }}>
                   <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>{isMarketing || isBusiness ? 'Key Achievements (use metrics)' : 'Achievements'}</span>
-                  <textarea className="glass-input" {...register('content.experience.0.achievements')} placeholder={isMarketing ? 'e.g., Increased lead conversion by 30%; Reduced CPA by 18%' : 'Outcomes, wins, impact'} style={{ minHeight: '80px', resize: 'vertical' }} />
+                  <textarea className="glass-input" {...register('content.experience.0.achievements')} placeholder={isMarketing ? 'e.g., Increased lead conversion by 30%; Reduced CPA by 18%' : 'Outcomes, wins, impact'} style={{ minHeight: '80px', resize: 'vertical' }} disabled={hasNoExperience} />
                 </label>
               </div>
             </div>
@@ -519,7 +661,67 @@ export default function EditorPage() {
             </div>
           </div>
         </form>
+        )}
       </div>
+
+      {/* AI suggestions modal */}
+      {suggestionModal.open && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="suggestion-modal-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 2000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0,0,0,0.5)',
+            padding: 24
+          }}
+          onClick={() => setSuggestionModal((m) => ({ ...m, open: false }))}
+        >
+          <div
+            className="glass-container glass-border"
+            style={{
+              maxWidth: 480,
+              maxHeight: '80vh',
+              padding: 24,
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 24px 48px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="suggestion-modal-title" style={{ margin: '0 0 12px 0', fontSize: 18, fontWeight: 600 }}>
+              AI Skill Suggestions
+            </h3>
+            <div
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                fontSize: 14,
+                lineHeight: 1.6,
+                color: 'var(--text)',
+                marginBottom: 16
+              }}
+            >
+              {suggestionModal.text}
+            </div>
+            <button
+              type="button"
+              className="glass-button"
+              onClick={() => setSuggestionModal((m) => ({ ...m, open: false }))}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

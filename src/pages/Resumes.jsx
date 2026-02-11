@@ -15,7 +15,16 @@ export default function ResumesPage() {
     try {
       setLoading(true)
       const data = await listResumes()
-      setItems(data)
+      setItems(data || [])
+    } catch (error) {
+      console.error('Error loading resumes:', error)
+      if (error?.message?.includes('Not authenticated')) {
+        // User not authenticated - this is handled by the app routing
+        setItems([])
+      } else {
+        alert('Failed to load resumes: ' + (error?.message || 'Unknown error'))
+        setItems([])
+      }
     } finally {
       setLoading(false)
     }
@@ -140,6 +149,14 @@ export default function ResumesPage() {
                   </div>
                   
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <Link to={`/editor?id=${item.id}`}>
+                      <button 
+                        className="glass-button" 
+                        disabled={deletedId === item.id}
+                      >
+                        ✏️ Edit
+                      </button>
+                    </Link>
                     <Link to={`/preview?id=${item.id}`}>
                       <button 
                         className="glass-button" 

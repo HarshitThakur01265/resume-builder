@@ -1,17 +1,44 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import html2pdf from 'html2pdf.js'
+import html2canvas from 'html2canvas'
 import { getLatestResume } from '../services/resumes'
 import PreviewCanvas from '../components/PreviewCanvas'
 import TypingResume from '../components/TypingResume'
 import LottieAnimation from '../components/LottieAnimation'
 import writingAnimation from '../assets/animations/writing.json'
 
+const TEMPLATE_OPTIONS = [
+  { id: 'classic', label: 'Classic' },
+  { id: 'modern', label: 'Modern' },
+  { id: 'minimal', label: 'Minimal' },
+  { id: 'professional', label: 'Professional' },
+  { id: 'creative', label: 'Creative' },
+  { id: 'compact', label: 'Compact' },
+  { id: 'academic', label: 'Academic' },
+  { id: 'business', label: 'Business' },
+  { id: 'technical', label: 'Technical' },
+  { id: 'sidebar', label: 'Sidebar' },
+  { id: 'elegant', label: 'Elegant' },
+  { id: 'gradient', label: 'Gradient' },
+  { id: 'timeline', label: 'Timeline' },
+  { id: 'two-column', label: 'Two Column' },
+  { id: 'ats', label: 'ATS' },
+  { id: 'infographic', label: 'Infographic' }
+]
+
+const EXPORT_FORMATS = [
+  { id: 'pdf', label: 'PDF' },
+  { id: 'jpg', label: 'JPG' }
+]
+
 export default function PreviewPage() {
   const [resume, setResume] = useState(null)
   const [showTyping, setShowTyping] = useState(true)
   const [searchParams] = useSearchParams()
   const [isExporting, setIsExporting] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState('classic')
+  const [exportFormat, setExportFormat] = useState('pdf')
   
   useEffect(() => {
     const id = searchParams.get('id')
@@ -25,6 +52,29 @@ export default function PreviewPage() {
       }
     }).catch(() => setResume(null))
   }, [searchParams])
+
+  useEffect(() => {
+    if (!resume) return
+    const incomingTemplate = resume.template || resume.content?.template || resume.content?._template
+    if (incomingTemplate) {
+      setSelectedTemplate(incomingTemplate)
+    }
+  }, [resume])
+
+  const previewResume = useMemo(() => {
+    const baseResume = resume || { title: 'Resume', template: 'classic', content: {} }
+    return {
+      ...baseResume,
+      template: selectedTemplate
+    }
+  }, [resume, selectedTemplate])
+
+  const safeTitle = useMemo(() => {
+    const fallback = 'resume'
+    const base = (previewResume?.title || fallback).trim()
+    const sanitized = base.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '-').toLowerCase()
+    return sanitized || fallback
+  }, [previewResume])
 
   const handleTypingComplete = () => {
     setShowTyping(false)
@@ -43,40 +93,55 @@ export default function PreviewPage() {
     node.style.boxShadow = 'none'
     node.style.borderRadius = '0'
     
-    const opt = {
-      margin: [10, 10, 10, 10], // top, right, bottom, left margins in mm
-      filename: (resume?.title || 'resume') + '.pdf',
-      image: { 
-        type: 'jpeg', 
-        quality: 0.95 
-      },
-      html2canvas: { 
-        scale: 2, 
-        useCORS: true, 
-        backgroundColor: '#ffffff',
-        logging: false,
-        letterRendering: true,
-        allowTaint: true
-      },
-      jsPDF: { 
-        unit: 'mm', 
-        format: 'a4', 
-        orientation: 'portrait',
-        compress: true
-      },
-      pagebreak: { 
-        mode: ['avoid-all', 'css', 'legacy'],
-        before: '.page-break',
-        after: '.avoid-break',
-        avoid: '.avoid-break'
-      }
-    }
-    
     try {
-      await html2pdf().set(opt).from(node).save()
+      const width = node.scrollWidth
+      const height = node.scrollHeight
+      if (exportFormat === 'jpg') {
+        const canvas = await html2canvas(node, {
+          scale: 3,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          windowWidth: width,
+          windowHeight: height
+        })
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95)
+        const link = document.createElement('a')
+        link.href = dataUrl
+        link.download = `${safeTitle}-${selectedTemplate}.jpg`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      } else {
+        // A4 at 96 DPI; multi-page PDF (no scaling — content flows to next pages)
+        const A4_WIDTH = 794
+        const A4_HEIGHT = 1123
+        const opt = {
+          margin: [20, 20, 20, 20],
+          filename: `${safeTitle}-${selectedTemplate}.pdf`,
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+            letterRendering: true,
+            allowTaint: true,
+            windowWidth: width,
+            windowHeight: height
+          },
+          jsPDF: {
+            unit: 'px',
+            format: [A4_WIDTH, A4_HEIGHT],
+            orientation: 'portrait',
+            compress: true
+          },
+          pagebreak: { mode: ['css', 'legacy'] }
+        }
+        await html2pdf().set(opt).from(node).save()
+      }
     } catch (error) {
       console.error('PDF generation failed:', error)
-      alert('Failed to generate PDF. Please try again.')
+      alert('Failed to export resume. Please try again.')
     } finally {
       // Restore original styles
       node.style.cssText = originalStyles
@@ -106,7 +171,47 @@ export default function PreviewPage() {
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '20px' }}>
+          <div className="export-options-grid">
+            <div className="export-option">
+              <label className="export-option-label" htmlFor="template-select">
+                Template
+              </label>
+              <select
+                id="template-select"
+                className="glass-input"
+                value={selectedTemplate}
+                onChange={(e) => {
+                  setSelectedTemplate(e.target.value)
+                  setShowTyping(false)
+                }}
+                disabled={isExporting}
+              >
+                {TEMPLATE_OPTIONS.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="export-option">
+              <div className="export-option-label">Export format</div>
+              <div className="format-options">
+                {EXPORT_FORMATS.map((format) => (
+                  <button
+                    key={format.id}
+                    type="button"
+                    className={`option-pill small ${exportFormat === format.id ? 'active' : ''}`}
+                    onClick={() => setExportFormat(format.id)}
+                    disabled={isExporting}
+                  >
+                    {format.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px' }}>
             <button 
               className="glass-button" 
               onClick={handleExport}
@@ -121,8 +226,10 @@ export default function PreviewPage() {
                   loop={true}
                   autoplay={true}
                 />
-              ) : (
+              ) : exportFormat === 'pdf' ? (
                 '📄 Export PDF'
+              ) : (
+                '🖼️ Export JPG'
               )}
             </button>
             <button 
@@ -149,11 +256,11 @@ export default function PreviewPage() {
             >
               {showTyping ? (
                 <TypingResume 
-                  resume={resume || { title: 'Resume', template: 'classic', content: {} }} 
+                  resume={previewResume} 
                   onComplete={handleTypingComplete}
                 />
               ) : (
-                <PreviewCanvas resume={resume || { title: 'Resume', template: 'classic', content: {} }} />
+                <PreviewCanvas resume={previewResume} />
               )}
             </div>
           </div>
