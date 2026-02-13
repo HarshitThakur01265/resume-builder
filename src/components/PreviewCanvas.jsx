@@ -13,6 +13,7 @@ import GradientTemplate from './templates/Gradient'
 import TimelineTemplate from './templates/Timeline'
 import TwoColumnTemplate from './templates/TwoColumn'
 import ATSTemplate from './templates/ATS'
+import FresherTemplate from './templates/Fresher'
 import InfographicTemplate from './templates/Infographic'
 import ProjectsGrid from './ProjectsGrid'
 
@@ -123,6 +124,7 @@ export default function PreviewCanvas({ resume }) {
       {selected === 'timeline' && <TimelineTemplate data={normalizedContent} />}
       {selected === 'two-column' && <TwoColumnTemplate data={normalizedContent} />}
       {selected === 'ats' && <ATSTemplate data={normalizedContent} />}
+      {selected === 'fresher' && <FresherTemplate data={normalizedContent} />}
       {selected === 'infographic' && <InfographicTemplate data={normalizedContent} />}
       <ProjectsGrid projects={normalizedContent.projects} resumeTitle={resume?.title} />
     </div>

@@ -16,6 +16,7 @@ const TEMPLATE_OPTIONS = [
   { id: 'creative', label: 'Creative' },
   { id: 'compact', label: 'Compact' },
   { id: 'academic', label: 'Academic' },
+  { id: 'fresher', label: 'Fresher / Student ATS' },
   { id: 'business', label: 'Business' },
   { id: 'technical', label: 'Technical' },
   { id: 'sidebar', label: 'Sidebar' },

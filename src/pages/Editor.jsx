@@ -27,6 +27,7 @@ const defaultValues = {
     education: [{ degree: '', year: '' }],
     experience: [{ role: '', company: '', period: '', summary: '' }],
     hasNoExperience: false,
+    hasNoProjects: false,
     skills: [''],
     projects: [
       {
@@ -66,6 +67,7 @@ export default function EditorPage() {
   const [suggestionModal, setSuggestionModal] = useState({ open: false, text: '' })
   const [dataLoaded, setDataLoaded] = useState(!isEditing) // If not editing, data is "loaded" (using defaults)
   const hasNoExperience = watch('content.hasNoExperience')
+  const hasNoProjects = watch('content.hasNoProjects')
   const p = (profileFromUrl || 'general').toLowerCase()
   const isSoftware = p === 'software'
   const isCreative = p === 'creative'
@@ -112,7 +114,8 @@ export default function EditorPage() {
                   return storedForm.content.hasNoExperience
                 }
                 return exp.length === 0 || (exp.length === 1 && (!exp[0]?.role || exp[0].role.trim() === ''))
-              })()
+              })(),
+              hasNoProjects: storedForm.content?.hasNoProjects ?? false
             }
           }
           
@@ -170,7 +173,7 @@ export default function EditorPage() {
       setValue('template', 'professional')
     } else if (p === 'student') {
       setValue('title', 'Student Resume')
-      setValue('template', 'academic')
+      setValue('template', 'fresher')
     } else if (p === 'business') {
       setValue('title', 'Business / Finance Resume')
       setValue('template', 'business')
@@ -190,6 +193,23 @@ export default function EditorPage() {
     }
   }, [hasNoExperience, setValue])
 
+  // Clear project fields when "No Projects" is checked
+  useEffect(() => {
+    if (hasNoProjects) {
+      setValue('content.projects.0.title', '')
+      setValue('content.projects.0.shortDescription', '')
+      setValue('content.projects.0.description', '')
+      setValue('content.projects.0.tech', '')
+      setValue('content.projects.0.images', [])
+      setValue('content.projects.0.videoUrl', '')
+      setValue('content.projects.0.liveUrl', '')
+      setValue('content.projects.0.figmaUrl', '')
+      setValue('content.projects.0.caseStudyUrl', '')
+      setValue('content.projects.0.githubUrl', '')
+      setValue('content.projects.0.link', '')
+    }
+  }, [hasNoProjects, setValue])
+
   const onSubmit = async (data) => {
     try {
       setIsLoading(true)
@@ -203,6 +223,10 @@ export default function EditorPage() {
       // If "No Experience" is selected, clear the experience array
       if (data.content?.hasNoExperience) {
         data.content.experience = []
+      }
+      // If "No Projects" is selected, clear the projects array
+      if (data.content?.hasNoProjects) {
+        data.content.projects = []
       }
       
       let savedResume
@@ -332,6 +356,7 @@ export default function EditorPage() {
                   <select className="glass-input" {...register('template')}>
                     <option value="classic">Classic</option>
                     <option value="academic">Academic</option>
+                    <option value="fresher">Fresher / Student ATS</option>
                     <option value="modern">Modern</option>
                     <option value="minimal">Minimal</option>
                     <option value="creative">Creative</option>
@@ -558,63 +583,75 @@ export default function EditorPage() {
 
         <div className="glass-container" style={{ padding: '24px' }}>
           <h3 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '18px', fontWeight: 600 }}>{isCreative ? 'Portfolio Showcase' : isStudent ? 'Academic Projects' : isMarketing ? 'Projects / Campaigns' : 'Projects'}</h3>
-          <div style={{ display: 'grid', gap: '16px' }}>
+          <div style={{ marginBottom: '16px', padding: '12px', background: 'rgba(96, 165, 250, 0.05)', borderRadius: '8px', border: '1px solid rgba(96, 165, 250, 0.2)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                {...register('content.hasNoProjects')}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+              <span style={{ color: 'var(--text)', fontSize: '14px', fontWeight: 500 }}>
+                I don't have any projects to list
+              </span>
+            </label>
+          </div>
+          <div style={{ display: 'grid', gap: '16px', opacity: hasNoProjects ? 0.5 : 1, pointerEvents: hasNoProjects ? 'none' : 'auto' }}>
             <label style={{ gap: '8px' }}>
               <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Title</span>
-              <input className="glass-input" {...register('content.projects.0.title')} placeholder="Project name" />
+              <input className="glass-input" {...register('content.projects.0.title')} placeholder="Project name" disabled={hasNoProjects} />
             </label>
             <label style={{ gap: '8px' }}>
               <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>{isMarketing ? 'Campaign Summary' : 'Short Description'}</span>
-              <input className="glass-input" {...register('content.projects.0.shortDescription')} placeholder={isMarketing ? 'One-liner about campaign and objective' : 'One-liner about the project'} />
+              <input className="glass-input" {...register('content.projects.0.shortDescription')} placeholder={isMarketing ? 'One-liner about campaign and objective' : 'One-liner about the project'} disabled={hasNoProjects} />
             </label>
             {isCreative && (
               <label style={{ gap: '8px' }}>
                 <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Client or Purpose</span>
-                <input className="glass-input" {...register('content.projects.0.client')} placeholder="Client XYZ / University Project" />
+                <input className="glass-input" {...register('content.projects.0.client')} placeholder="Client XYZ / University Project" disabled={hasNoProjects} />
               </label>
             )}
             <label style={{ gap: '8px' }}>
               <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Detailed Description</span>
-              <textarea className="glass-input" {...register('content.projects.0.description')} placeholder="What it does, your role, technologies used" style={{ minHeight: '80px', resize: 'vertical' }} />
+              <textarea className="glass-input" {...register('content.projects.0.description')} placeholder="What it does, your role, technologies used" style={{ minHeight: '80px', resize: 'vertical' }} disabled={hasNoProjects} />
             </label>
             <label style={{ gap: '8px' }}>
               <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>{isCreative ? 'My Role' : isMarketing ? 'My Contribution' : 'Technologies Used (comma separated)'}</span>
-              <input className="glass-input" {...register('content.projects.0.tech')} placeholder={isCreative ? 'UI/UX Designer, Brand Strategist' : isMarketing ? 'Owned email strategy; built dashboards' : 'React, Node.js, PostgreSQL'} />
+              <input className="glass-input" {...register('content.projects.0.tech')} placeholder={isCreative ? 'UI/UX Designer, Brand Strategist' : isMarketing ? 'Owned email strategy; built dashboards' : 'React, Node.js, PostgreSQL'} disabled={hasNoProjects} />
             </label>
             <label style={{ gap: '8px' }}>
               <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>{isCreative ? 'Images (portfolio shots, comma separated URLs)' : 'Images (comma separated URLs)'}</span>
-              <input className="glass-input" onChange={(e) => setValue('content.projects.0.images', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} placeholder={isCreative ? 'https://...portfolio1.jpg, https://...shot2.png' : 'https://...jpg, https://...png'} />
+              <input className="glass-input" onChange={(e) => setValue('content.projects.0.images', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} placeholder={isCreative ? 'https://...portfolio1.jpg, https://...shot2.png' : 'https://...jpg, https://...png'} disabled={hasNoProjects} />
             </label>
             <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
               <label style={{ gap: '8px' }}>
                 <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Video URL (YouTube/Vimeo)</span>
-                <input className="glass-input" {...register('content.projects.0.videoUrl')} placeholder="https://www.youtube.com/embed/..." />
+                <input className="glass-input" {...register('content.projects.0.videoUrl')} placeholder="https://www.youtube.com/embed/..." disabled={hasNoProjects} />
               </label>
               <label style={{ gap: '8px' }}>
                 <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Live URL (embed)</span>
-                <input className="glass-input" {...register('content.projects.0.liveUrl')} placeholder="https://your-live-demo.com" />
+                <input className="glass-input" {...register('content.projects.0.liveUrl')} placeholder="https://your-live-demo.com" disabled={hasNoProjects} />
               </label>
               {isCreative && (
                 <label style={{ gap: '8px' }}>
                   <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Figma URL</span>
-                  <input className="glass-input" {...register('content.projects.0.figmaUrl')} placeholder="https://www.figma.com/file/..." />
+                  <input className="glass-input" {...register('content.projects.0.figmaUrl')} placeholder="https://www.figma.com/file/..." disabled={hasNoProjects} />
                 </label>
               )}
               {isCreative && (
                 <label style={{ gap: '8px' }}>
                   <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Link to Full Case Study</span>
-                  <input className="glass-input" {...register('content.projects.0.caseStudyUrl')} placeholder="https://portfolio.site/case-study" />
+                  <input className="glass-input" {...register('content.projects.0.caseStudyUrl')} placeholder="https://portfolio.site/case-study" disabled={hasNoProjects} />
                 </label>
               )}
               {isSoftware && (
                 <label style={{ gap: '8px' }}>
                   <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>GitHub URL</span>
-                  <input className="glass-input" {...register('content.projects.0.githubUrl')} placeholder="https://github.com/username/repo" />
+                  <input className="glass-input" {...register('content.projects.0.githubUrl')} placeholder="https://github.com/username/repo" disabled={hasNoProjects} />
                 </label>
               )}
               <label style={{ gap: '8px' }}>
                 <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>External Link</span>
-                <input className="glass-input" {...register('content.projects.0.link')} placeholder="https://project-site.com" />
+                <input className="glass-input" {...register('content.projects.0.link')} placeholder="https://project-site.com" disabled={hasNoProjects} />
               </label>
             </div>
           </div>
