@@ -17,7 +17,7 @@ export function ThemeProvider({ children }) {
   return (
     <>
       <ColorSchemeScript defaultColorScheme="dark" />
-      <MantineProvider defaultColorScheme={colorScheme} theme={{ fontFamily: 'Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial' }}>
+      <MantineProvider defaultColorScheme={colorScheme} theme={{ fontFamily: '"DM Sans", system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif' }}>
         {children}
       </MantineProvider>
     </>

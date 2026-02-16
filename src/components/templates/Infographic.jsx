@@ -14,7 +14,7 @@ export default function InfographicTemplate({ data }) {
         .filter(Boolean)
     )
   return (
-    <div style={{ fontFamily: 'Inter, system-ui, sans-serif', color: '#0f172a' }}>
+    <div style={{ fontFamily: '"DM Sans", system-ui, sans-serif', color: '#0f172a' }}>
       <div style={{ marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
           <div style={{ width: 10, height: 10, borderRadius: 999, background: '#10b981' }} />

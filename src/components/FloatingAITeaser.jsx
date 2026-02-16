@@ -149,10 +149,10 @@ export default function FloatingAITeaser({ corner = 'bottom-right' }) {
           100% { background-position: 200% 0; }
         }
         .fab-button {
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .fab-button:hover {
-          transform: scale(1.1);
+          transform: scale(1.05);
         }
         .hover-message {
           animation: fade-in 0.3s ease-out;
@@ -172,17 +172,17 @@ export default function FloatingAITeaser({ corner = 'bottom-right' }) {
               aria-label="Open AI Assistant"
               className="fab-button"
               style={{
-                width: 64,
-                height: 64,
+                width: 56,
+                height: 56,
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                background: '#2563eb',
                 border: 'none',
                 color: 'white',
-                fontSize: 28,
+                fontSize: 24,
                 cursor: 'pointer',
                 boxShadow: isPulsing
-                  ? '0 12px 48px rgba(59, 130, 246, 0.5), 0 0 0 8px rgba(59, 130, 246, 0)'
-                  : '0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2)',
+                  ? '0 4px 20px rgba(37, 99, 235, 0.4)'
+                  : '0 4px 12px rgba(0, 0, 0, 0.25)',
                 animation: isPulsing ? 'pulse-glow 2s ease-in-out infinite' : 'none',
                 display: 'flex',
                 alignItems: 'center',
