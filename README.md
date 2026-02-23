@@ -6,9 +6,23 @@ Build and export professional resumes with templates and AI assistance.
 
 - Copy `.env.example` to `.env` and set:
   - `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (from Supabase Dashboard → Project Settings → API).
-- **Gemini API key** is not set in the frontend. Configure it in Supabase:
-  - Dashboard → Project Settings → Edge Functions → Secrets: add `GEMINI_API_KEY`.
-  - Optionally add `GEMINI_MODEL` (e.g. `gemini-2.0-flash` or `gemini-1.5-flash-002`).
+
+### AI Chatbot (Edge Function)
+
+The AI assistant uses a Supabase Edge Function so the Gemini API key never lives in the frontend.
+
+1. **Deploy the Edge Function** (required for the chatbot to work):
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref YOUR_PROJECT_REF
+   npx supabase functions deploy ask-gemini
+   ```
+2. **Set the Gemini API key** in Supabase:
+   - Dashboard → **Project Settings** → **Edge Functions** → **Secrets**
+   - Add secret: `GEMINI_API_KEY` = your key from [Google AI Studio](https://aistudio.google.com/apikey)
+   - Optionally add `GEMINI_MODEL` (e.g. `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.5-flash-lite`).
+
+If you see *"Failed to send a request to the Edge Function"*, the function is not deployed or not reachable—complete step 1 and ensure `VITE_SUPABASE_URL` matches the linked project.
 
 ---
 

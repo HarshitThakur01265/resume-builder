@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { listResumes, deleteResume } from '../services/resumes'
 import { Link } from 'react-router-dom'
+import { ResumesListSkeleton } from '../components/Skeleton'
 import LottieAnimation from '../components/LottieAnimation'
 import loadingAnimation from '../assets/animations/loading.json'
 import successAnimation from '../assets/animations/success.json'
@@ -68,18 +69,8 @@ export default function ResumesPage() {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div className="glass-container" style={{ padding: '40px', borderRadius: '50%' }}>
-              <LottieAnimation
-                animationData={loadingAnimation}
-                width={80}
-                height={80}
-                className="loading-animation"
-                loop={true}
-                autoplay={true}
-              />
-            </div>
-            <p style={{ marginTop: '20px', color: 'var(--muted)', fontSize: '16px' }}>Loading resumes...</p>
+          <div style={{ padding: '20px 0' }}>
+            <ResumesListSkeleton />
           </div>
         ) : items.length === 0 ? (
           <div className="glass-container" style={{ 

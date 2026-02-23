@@ -1,7 +1,5 @@
-import { supabase } from '../lib/supabaseClient'
-
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-// API key is only on the server (Edge Function). No VITE_GEMINI_* in frontend.
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 // --- 1) Greeting detector ---
 function isGreeting(prompt) {
@@ -37,23 +35,75 @@ export async function askGemini(prompt, options = {}) {
     }
   }
 
-  // 1) Supabase Edge Function (API key stays on server)
-  if (supabase) {
-    const { data, error } = await supabase.functions.invoke('ask-gemini', { body: { prompt } })
-    if (error) throw new Error(error.message || 'Edge function error')
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
-  }
+  const edgeFunctionHelp = [
+    '1) Deploy the Edge Function: run "supabase functions deploy ask-gemini" from the project root.',
+    '2) In Supabase Dashboard → Project Settings → Edge Functions → Secrets, add GEMINI_API_KEY (get a key from Google AI Studio).'
+  ].join(' ')
 
-  // 2) Fallback: REST to Edge Function (no API key in client)
+  // Call Edge Function via fetch so we can read the exact error body on non-2xx
   const base = SUPABASE_URL || 'http://127.0.0.1:54321'
-  const resp = await fetch(`${base}/functions/v1/ask-gemini`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt })
-  })
-  const data = await resp.json().catch(() => ({}))
-  if (!resp.ok) throw new Error(data?.error?.message || data?.error || `HTTP ${resp.status}`)
-  return data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  const url = `${base}/functions/v1/ask-gemini`
+  const headers = { 'Content-Type': 'application/json' }
+  if (SUPABASE_ANON_KEY) headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`
+
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ prompt })
+    })
+    
+    // Read response as text first to handle empty/invalid JSON
+    const responseText = await resp.text()
+    if (!responseText || responseText.trim() === '') {
+      throw new Error('Empty response from Edge Function. Check Edge Function logs in Supabase Dashboard.')
+    }
+    
+    let data
+    try {
+      data = JSON.parse(responseText)
+    } catch (parseError) {
+      throw new Error(`Invalid response from Edge Function: ${responseText.substring(0, 200)}`)
+    }
+    
+    if (!resp.ok) {
+      // Extract error message from response body
+      let errMsg = data?.error || `HTTP ${resp.status}`
+      if (data?.details) {
+        if (typeof data.details === 'string') {
+          errMsg = data.details
+        } else if (data.details?.error?.message) {
+          errMsg = data.details.error.message
+        } else if (data.details?.message) {
+          errMsg = data.details.message
+        } else {
+          errMsg = JSON.stringify(data.details)
+        }
+      }
+      
+      if (resp.status === 401) {
+        throw new Error('Authentication failed (401). Use the correct Supabase anon key: Supabase Dashboard → Project Settings → API → copy the "anon public" key (a long JWT starting with eyJ...). Put it in .env as VITE_SUPABASE_ANON_KEY and restart the app.')
+      }
+      if (errMsg === 'GEMINI_API_KEY not configured' || /not configured/i.test(errMsg)) {
+        throw new Error(`AI not configured. ${edgeFunctionHelp}`)
+      }
+      if (data?.error === 'Gemini error' && data?.details) {
+        const detail = data.details?.error?.message || (typeof data.details === 'string' ? data.details : JSON.stringify(data.details))
+        throw new Error(`Gemini API: ${detail}`)
+      }
+      if (errMsg === 'Bad request' && data?.details) {
+        throw new Error(`Edge Function error: ${typeof data.details === 'string' ? data.details : JSON.stringify(data.details)}`)
+      }
+      throw new Error(errMsg)
+    }
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  } catch (e) {
+    if (e?.message?.includes('AI not configured') || e?.message?.includes('Edge Function not reachable') || e?.message?.startsWith('Gemini API:')) throw e
+    if (/failed to fetch|network|Load failed/i.test(e?.message || '') || e?.name === 'TypeError') {
+      throw new Error(`Edge Function not reachable. ${edgeFunctionHelp}`)
+    }
+    throw e
+  }
 }
 
 // --- 4) Sanitize AI output for safe display (limit length, strip HTML) ---

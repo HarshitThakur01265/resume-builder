@@ -1,3 +1,4 @@
+import { motion, AnimatePresence } from 'framer-motion'
 import ClassicTemplate from './templates/Classic'
 import AcademicTemplate from './templates/Academic'
 import ModernTemplate from './templates/Modern'
@@ -107,25 +108,41 @@ export default function PreviewCanvas({ resume }) {
     education: normalizeEducation(content.education)
   }
 
+  const templateProps = { data: normalizedContent }
+  const templateMap = {
+    classic: <ClassicTemplate {...templateProps} />,
+    academic: <AcademicTemplate {...templateProps} />,
+    modern: <ModernTemplate {...templateProps} />,
+    minimal: <MinimalTemplate {...templateProps} />,
+    creative: <CreativeTemplate {...templateProps} />,
+    compact: <CompactTemplate {...templateProps} />,
+    professional: <ProfessionalTemplate {...templateProps} />,
+    technical: <TechnicalTemplate {...templateProps} />,
+    business: <BusinessTemplate {...templateProps} />,
+    sidebar: <SidebarTemplate {...templateProps} />,
+    elegant: <ElegantTemplate {...templateProps} />,
+    gradient: <GradientTemplate {...templateProps} />,
+    timeline: <TimelineTemplate {...templateProps} />,
+    'two-column': <TwoColumnTemplate {...templateProps} />,
+    ats: <ATSTemplate {...templateProps} />,
+    fresher: <FresherTemplate {...templateProps} />,
+    infographic: <InfographicTemplate {...templateProps} />
+  }
+
   return (
     <div>
-      {selected === 'classic' && <ClassicTemplate data={normalizedContent} />}
-      {selected === 'academic' && <AcademicTemplate data={normalizedContent} />}
-      {selected === 'modern' && <ModernTemplate data={normalizedContent} />}
-      {selected === 'minimal' && <MinimalTemplate data={normalizedContent} />}
-      {selected === 'creative' && <CreativeTemplate data={normalizedContent} />}
-      {selected === 'compact' && <CompactTemplate data={normalizedContent} />}
-      {selected === 'professional' && <ProfessionalTemplate data={normalizedContent} />}
-      {selected === 'technical' && <TechnicalTemplate data={normalizedContent} />}
-      {selected === 'business' && <BusinessTemplate data={normalizedContent} />}
-      {selected === 'sidebar' && <SidebarTemplate data={normalizedContent} />}
-      {selected === 'elegant' && <ElegantTemplate data={normalizedContent} />}
-      {selected === 'gradient' && <GradientTemplate data={normalizedContent} />}
-      {selected === 'timeline' && <TimelineTemplate data={normalizedContent} />}
-      {selected === 'two-column' && <TwoColumnTemplate data={normalizedContent} />}
-      {selected === 'ats' && <ATSTemplate data={normalizedContent} />}
-      {selected === 'fresher' && <FresherTemplate data={normalizedContent} />}
-      {selected === 'infographic' && <InfographicTemplate data={normalizedContent} />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={selected}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{ minHeight: 1 }}
+        >
+          {templateMap[selected] || templateMap.classic}
+        </motion.div>
+      </AnimatePresence>
       <ProjectsGrid projects={normalizedContent.projects} resumeTitle={resume?.title} />
     </div>
   )

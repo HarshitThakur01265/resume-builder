@@ -1,11 +1,24 @@
 import { useForm } from 'react-hook-form'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { saveResume, getResume, updateResume } from '../services/resumes'
 import { suggestMissingSkills, sanitizeAiText } from '../services/gemini'
+import TemplateSelector from '../components/TemplateSelector'
+import { EditorLoadingSkeleton } from '../components/Skeleton'
 import LottieAnimation from '../components/LottieAnimation'
 import loadingAnimation from '../assets/animations/loading.json'
 import successAnimation from '../assets/animations/success.json'
+
+const STEPS = [
+  { id: 1, label: 'Basics' },
+  { id: 2, label: 'Experience' },
+  { id: 3, label: 'Skills' },
+  { id: 4, label: 'Projects' },
+  { id: 5, label: 'Finalize' }
+]
+const AUTO_SAVE_DEBOUNCE_MS = 1500
+const SAVED_INDICATOR_MS = 3000
 
 const PROFILE_OPTIONS = [
   { key: 'software', label: 'Software Developer / IT' },
@@ -65,7 +78,11 @@ export default function EditorPage() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [isSuggesting, setIsSuggesting] = useState(false)
   const [suggestionModal, setSuggestionModal] = useState({ open: false, text: '' })
-  const [dataLoaded, setDataLoaded] = useState(!isEditing) // If not editing, data is "loaded" (using defaults)
+  const [dataLoaded, setDataLoaded] = useState(!isEditing)
+  const [currentStep, setCurrentStep] = useState(1)
+  const [saveStatus, setSaveStatus] = useState('idle') // 'idle' | 'saving' | 'saved'
+  const autoSaveTimerRef = useRef(null)
+  const savedIndicatorTimerRef = useRef(null)
   const hasNoExperience = watch('content.hasNoExperience')
   const hasNoProjects = watch('content.hasNoProjects')
   const p = (profileFromUrl || 'general').toLowerCase()
@@ -210,6 +227,32 @@ export default function EditorPage() {
     }
   }, [hasNoProjects, setValue])
 
+  // Auto-save when editing (debounced)
+  const formValues = watch()
+  useEffect(() => {
+    if (!isEditing || !resumeId || !dataLoaded) return
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+    autoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        setSaveStatus('saving')
+        const data = getValues()
+        if (data.content?.hasNoExperience) data.content.experience = []
+        if (data.content?.hasNoProjects) data.content.projects = []
+        await updateResume(resumeId, data)
+        setSaveStatus('saved')
+        if (savedIndicatorTimerRef.current) clearTimeout(savedIndicatorTimerRef.current)
+        savedIndicatorTimerRef.current = setTimeout(() => setSaveStatus('idle'), SAVED_INDICATOR_MS)
+      } catch (e) {
+        setSaveStatus('idle')
+      } finally {
+        autoSaveTimerRef.current = null
+      }
+    }, AUTO_SAVE_DEBOUNCE_MS)
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+    }
+  }, [formValues, isEditing, resumeId, dataLoaded, getValues])
+
   const onSubmit = async (data) => {
     try {
       setIsLoading(true)
@@ -283,7 +326,7 @@ export default function EditorPage() {
 
   return (
     <div className="page-glass-wrapper">
-      <div className="glass-container glass-border" style={{ maxWidth: 900, padding: '40px', zIndex: 2 }}>
+      <div className="glass-container glass-border" style={{ maxWidth: 900, padding: '40px', zIndex: 2, position: 'relative' }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <h1 style={{ margin: '0 0 8px 0', color: 'var(--text)', fontSize: '32px', fontWeight: 700 }}>
             Resume Editor
@@ -330,17 +373,50 @@ export default function EditorPage() {
           </div>
         </div>
 
+        {/* Step indicator */}
+        {!isLoadingData && (
+          <div className="editor-stepper" style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            marginBottom: 24,
+            flexWrap: 'wrap'
+          }}>
+            {STEPS.map((step, idx) => (
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => setCurrentStep(step.id)}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 6,
+                  border: `1px solid ${currentStep === step.id ? 'rgba(59, 130, 246, 0.6)' : 'rgba(255,255,255,0.15)'}`,
+                  background: currentStep === step.id ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                  color: currentStep === step.id ? 'var(--text)' : 'var(--muted)',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {step.id}. {step.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Auto-save indicator */}
+        {!isLoadingData && isEditing && (
+          <div style={{ position: 'absolute', top: 16, right: 24, zIndex: 5, fontSize: 13, color: 'var(--muted)' }}>
+            {saveStatus === 'saving' && <span>Saving…</span>}
+            {saveStatus === 'saved' && <span style={{ color: 'var(--accent)' }}>Saved just now</span>}
+          </div>
+        )}
+
         {isLoadingData && (
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <LottieAnimation
-              animationData={loadingAnimation}
-              width={60}
-              height={60}
-              className="loading-animation"
-              loop={true}
-              autoplay={true}
-            />
-            <p style={{ marginTop: '16px', color: 'var(--muted)', fontSize: '16px' }}>Loading your resume data...</p>
+          <div style={{ padding: '24px 0' }}>
+            <EditorLoadingSkeleton />
           </div>
         )}
 
@@ -348,39 +424,26 @@ export default function EditorPage() {
           <form key={dataLoaded ? 'form-loaded' : 'form-loading'} onSubmit={handleSubmit(onSubmit)}>
           <input type="hidden" {...register('profile')} />
           <div className="form-grid" style={{ gap: '20px' }}>
-            <div className="glass-container" style={{ padding: '24px' }}>
-              <h3 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '18px', fontWeight: 600 }}>Basic Information</h3>
-              <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-                <label style={{ gap: '8px' }}>
-                  <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Template</span>
-                  <select className="glass-input" {...register('template')}>
-                    <option value="classic">Classic</option>
-                    <option value="academic">Academic</option>
-                    <option value="fresher">Fresher / Student ATS</option>
-                    <option value="modern">Modern</option>
-                    <option value="minimal">Minimal</option>
-                    <option value="creative">Creative</option>
-                    <option value="compact">Compact</option>
-                    <option value="professional">Professional </option>
-                    <option value="technical">Technical</option>
-                    <option value="business">Business</option>
-                    <option value="sidebar">Sidebar</option>
-                    <option value="elegant">Elegant</option>
-                    <option value="gradient">Gradient</option>
-                    <option value="timeline">Timeline</option>
-                    <option value="two-column">Two Column</option>
-                    <option value="ats">ATS</option>
-                    <option value="infographic">Infographic</option>
-                  </select>
-                </label>
-                <label style={{ gap: '8px' }}>
-                  <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Title</span>
-                  <input className="glass-input" {...register('title')} placeholder="Title" />
-                </label>
-              </div>
-            </div>
-
-            <div className="glass-container" style={{ padding: '24px' }}>
+            <AnimatePresence mode="wait">
+              {/* Step 1: Basics */}
+              {currentStep === 1 && (
+                <motion.div
+                  key="step1"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25 }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 20, overflow: 'hidden' }}
+                >
+                  <div className="glass-container editor-section" style={{ padding: '24px' }}>
+                    <h3 style={{ margin: '0 0 16px 0', color: 'var(--text)', fontSize: '18px', fontWeight: 600 }}>Template & Title</h3>
+                    <TemplateSelector value={watch('template')} onChange={(id) => setValue('template', id)} compact />
+                    <label style={{ gap: '8px', marginTop: 16 }}>
+                      <span style={{ color: 'var(--muted)', fontSize: '14px', fontWeight: 500 }}>Resume title</span>
+                      <input className="glass-input" {...register('title')} placeholder="e.g. Frontend Developer Resume" />
+                    </label>
+                  </div>
+                  <div className="glass-container editor-section" style={{ padding: '24px' }}>
               <h3 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '18px', fontWeight: 600 }}>Personal Information</h3>
               <div style={{ display: 'grid', gap: '16px' }}> 
                 <label style={{ gap: '8px' }}>
@@ -488,8 +551,20 @@ export default function EditorPage() {
                 )}
               </div>
             </div>
+                </motion.div>
+              )}
 
-            <div className="glass-container" style={{ padding: '24px' }}>
+              {/* Step 2: Experience */}
+              {currentStep === 2 && (
+                <motion.div
+                  key="step2"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25 }}
+                  style={{ overflow: 'hidden' }}
+                >
+            <div className="glass-container editor-section" style={{ padding: '24px' }}>
               <h3 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '18px', fontWeight: 600 }}>Experience</h3>
               <div style={{ marginBottom: '20px', padding: '12px', background: 'rgba(96, 165, 250, 0.05)', borderRadius: '8px', border: '1px solid rgba(96, 165, 250, 0.2)' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
@@ -536,8 +611,20 @@ export default function EditorPage() {
                 </label>
               </div>
             </div>
+                </motion.div>
+              )}
 
-            <div className="glass-container" style={{ padding: '24px' }}>
+              {/* Step 3: Skills */}
+              {currentStep === 3 && (
+                <motion.div
+                  key="step3"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25 }}
+                  style={{ overflow: 'hidden' }}
+                >
+            <div className="glass-container editor-section" style={{ padding: '24px' }}>
               <h3 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '18px', fontWeight: 600 }}>{isSoftware ? 'Technical Skills (Languages, Frameworks, Databases, Tools)' : isMarketing ? 'Skills (Digital Tools, CRM, Soft Skills)' : isStudent ? 'Skills (Technical & Soft)' : 'Skills'}</h3>
               {isSoftware ? (
                 <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
@@ -580,8 +667,20 @@ export default function EditorPage() {
                 </label>
               )}
             </div>
+                </motion.div>
+              )}
 
-        <div className="glass-container" style={{ padding: '24px' }}>
+              {/* Step 4: Projects */}
+              {currentStep === 4 && (
+                <motion.div
+                  key="step4"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25 }}
+                  style={{ overflow: 'hidden' }}
+                >
+        <div className="glass-container editor-section" style={{ padding: '24px' }}>
           <h3 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '18px', fontWeight: 600 }}>{isCreative ? 'Portfolio Showcase' : isStudent ? 'Academic Projects' : isMarketing ? 'Projects / Campaigns' : 'Projects'}</h3>
           <div style={{ marginBottom: '16px', padding: '12px', background: 'rgba(96, 165, 250, 0.05)', borderRadius: '8px', border: '1px solid rgba(96, 165, 250, 0.2)' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
@@ -656,7 +755,25 @@ export default function EditorPage() {
             </div>
           </div>
         </div>
+                </motion.div>
+              )}
 
+              {/* Step 5: Finalize */}
+              {currentStep === 5 && (
+                <motion.div
+                  key="step5"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25 }}
+                  style={{ overflow: 'hidden' }}
+                >
+            <div className="glass-container" style={{ padding: '24px', marginBottom: 20 }}>
+              <h3 style={{ margin: '0 0 16px 0', color: 'var(--text)', fontSize: '18px', fontWeight: 600 }}>Review & Save</h3>
+              <p style={{ color: 'var(--muted)', fontSize: 14, margin: 0 }}>
+                You can go back to any step to edit. When ready, save your resume to preview and export.
+              </p>
+            </div>
             <div className="row" style={{ gap: '12px', marginTop: '20px', justifyContent: 'center' }}>
               <button className="glass-button" type="submit" disabled={isLoading}>
                 {isLoading ? (
@@ -696,6 +813,30 @@ export default function EditorPage() {
                 )}
               </button>
             </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Step navigation (when not on Finalize) */}
+            {currentStep < 5 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <button
+                  type="button"
+                  className="glass-button"
+                  onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
+                  disabled={currentStep === 1}
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  className="glass-button"
+                  onClick={() => setCurrentStep((s) => Math.min(5, s + 1))}
+                >
+                  Next: {STEPS.find((x) => x.id === currentStep + 1)?.label}
+                </button>
+              </div>
+            )}
           </div>
         </form>
         )}

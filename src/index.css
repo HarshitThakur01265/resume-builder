@@ -179,6 +179,11 @@ html {
   filter: drop-shadow(0 6px 14px rgba(0,0,0,0.25));
 }
 
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 @keyframes pen-path {
   0%   { transform: translate(0px, 0px) rotate(2deg); }
   20%  { transform: translate(540px, 0px) rotate(-3deg); }
@@ -808,6 +813,10 @@ button.secondary:hover {
   .success-animation,
   .hover-lottie {
     transition: none !important;
+    animation: none !important;
+  }
+  .skeleton-line,
+  .editor-section {
     animation: none !important;
   }
   .quote-slides { transition: none !important; }

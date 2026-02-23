@@ -4,29 +4,11 @@ import html2pdf from 'html2pdf.js'
 import html2canvas from 'html2canvas'
 import { getLatestResume } from '../services/resumes'
 import PreviewCanvas from '../components/PreviewCanvas'
+import TemplateSelector from '../components/TemplateSelector'
 import TypingResume from '../components/TypingResume'
 import LottieAnimation from '../components/LottieAnimation'
+import { PreviewLoadingSkeleton } from '../components/Skeleton'
 import writingAnimation from '../assets/animations/writing.json'
-
-const TEMPLATE_OPTIONS = [
-  { id: 'classic', label: 'Classic' },
-  { id: 'modern', label: 'Modern' },
-  { id: 'minimal', label: 'Minimal' },
-  { id: 'professional', label: 'Professional' },
-  { id: 'creative', label: 'Creative' },
-  { id: 'compact', label: 'Compact' },
-  { id: 'academic', label: 'Academic' },
-  { id: 'fresher', label: 'Fresher / Student ATS' },
-  { id: 'business', label: 'Business' },
-  { id: 'technical', label: 'Technical' },
-  { id: 'sidebar', label: 'Sidebar' },
-  { id: 'elegant', label: 'Elegant' },
-  { id: 'gradient', label: 'Gradient' },
-  { id: 'timeline', label: 'Timeline' },
-  { id: 'two-column', label: 'Two Column' },
-  { id: 'ats', label: 'ATS' },
-  { id: 'infographic', label: 'Infographic' }
-]
 
 const EXPORT_FORMATS = [
   { id: 'pdf', label: 'PDF' },
@@ -173,26 +155,17 @@ export default function PreviewPage() {
           </div>
 
           <div className="export-options-grid">
-            <div className="export-option">
-              <label className="export-option-label" htmlFor="template-select">
-                Template
-              </label>
-              <select
-                id="template-select"
-                className="glass-input"
+            <div className="export-option" style={{ gridColumn: '1 / -1' }}>
+              <label className="export-option-label">Template</label>
+              <TemplateSelector
                 value={selectedTemplate}
-                onChange={(e) => {
-                  setSelectedTemplate(e.target.value)
+                onChange={(id) => {
+                  setSelectedTemplate(id)
                   setShowTyping(false)
                 }}
                 disabled={isExporting}
-              >
-                {TEMPLATE_OPTIONS.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                compact={false}
+              />
             </div>
             <div className="export-option">
               <div className="export-option-label">Export format</div>
@@ -255,7 +228,9 @@ export default function PreviewPage() {
                 backdropFilter: 'none'
               }}
             >
-              {showTyping ? (
+              {!resume ? (
+                <PreviewLoadingSkeleton />
+              ) : showTyping ? (
                 <TypingResume 
                   resume={previewResume} 
                   onComplete={handleTypingComplete}
