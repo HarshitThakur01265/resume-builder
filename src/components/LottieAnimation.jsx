@@ -1,5 +1,10 @@
 import React from 'react'
-import Lottie from 'lottie-react'
+import * as LottieModule from 'lottie-react'
+
+const LottieComponent =
+  LottieModule?.default?.default ||
+  LottieModule?.default ||
+  LottieModule?.Lottie
 
 const LottieAnimation = ({ 
   animationData, 
@@ -38,18 +43,20 @@ const LottieAnimation = ({
       }}
       {...props}
     >
-      <Lottie
-        animationData={animationData}
-        loop={loop}
-        autoplay={autoplay}
-        speed={speed}
-        onComplete={handleComplete}
-        onLoopComplete={handleLoopComplete}
-        style={{
-          width: '100%',
-          height: '100%'
-        }}
-      />
+      {LottieComponent ? (
+        <LottieComponent
+          animationData={animationData}
+          loop={loop}
+          autoplay={autoplay}
+          speed={speed}
+          onComplete={handleComplete}
+          onLoopComplete={handleLoopComplete}
+          style={{
+            width: '100%',
+            height: '100%'
+          }}
+        />
+      ) : null}
     </div>
   )
 }
