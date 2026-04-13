@@ -6,6 +6,7 @@ Build and export professional resumes with templates and AI assistance.
 
 - Copy `.env.example` to `.env` and set:
   - `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (from Supabase Dashboard → Project Settings → API).
+- If setup keeps failing, use the full recovery checklist in `SETUP.md`.
 
 ### AI Chatbot (Edge Function)
 

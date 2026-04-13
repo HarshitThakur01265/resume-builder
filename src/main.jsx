@@ -7,6 +7,13 @@ import { AuthProvider } from './context/AuthProvider.jsx'
 import { ThemeProvider } from './theme.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import ScrollToTop from './components/ScrollToTop.jsx'
+import { getSupabaseStartupWarnings } from './lib/supabaseClient.js'
+
+const startupWarnings = getSupabaseStartupWarnings()
+if (startupWarnings.length > 0) {
+  console.warn('[Startup check] Review environment configuration:')
+  startupWarnings.forEach((warning) => console.warn(`- ${warning}`))
+}
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
